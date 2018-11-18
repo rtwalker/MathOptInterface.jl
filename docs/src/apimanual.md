@@ -942,27 +942,55 @@ called `Optimizer`):
 
 ### JuMP mapping
 
-MOI defines a very general interface, with multiple possible ways to describe the same constraint. This is considered a feature, not a bug. MOI is designed to make it possible to experiment with alternative representations of an optimization problem at both the solving and modeling level. When implementing an interface, it is important to keep in mind that the constraints which a solver supports via MOI will have a near 1-to-1 correspondence with how users can express problems in JuMP, because JuMP does not perform automatic transformations. (Alternative systems like Convex.jl do.) The following bullet points show examples of how JuMP constraints are translated into MOI function-set pairs:
+MOI defines a very general interface, with multiple possible ways to describe
+the same constraint. This is considered a feature, not a bug. MOI is designed to
+make it possible to experiment with alternative representations of an
+optimization problem at both the solving and modeling level. When implementing
+an interface, it is important to keep in mind that the constraints which a
+solver supports via MOI will have a near 1-to-1 correspondence with how users
+can express problems in JuMP, because JuMP does not perform automatic
+transformations. (Alternative systems like Convex.jl do.) The following bullet
+points show examples of how JuMP constraints are translated into MOI
+function-set pairs:
  - `@constraint(m, 2x + y <= 10)` becomes `ScalarAffineFunction`-in-`LessThan`;
  - `@constraint(m, 2x + y >= 10)` becomes `ScalarAffineFunction`-in-`GreaterThan`;
  - `@constraint(m, 2x + y == 10)` becomes `ScalarAffineFunction`-in-`EqualTo`;
  - `@constraint(m, 0 <= 2x + y <= 10)` becomes `ScalarAffineFunction`-in-`Interval`;
- - `@constraint(m, 2x + y in ArbitrarySet())` becomes `ScalarAffineFunction`-in-`ArbitrarySet`.
+ - `@constraint(m, 2x + y in ArbitrarySet())` becomes
+   `ScalarAffineFunction`-in-`ArbitrarySet`.
 
 Variable bounds are handled in a similar fashion:
  - `@variable(m, x <= 1)` becomes `SingleVariable`-in-`LessThan`;
  - `@variable(m, x >= 1)` becomes `SingleVariable`-in-`GreaterThan`.
 
-One notable difference is that a variable with an upper and lower bound is translated into two constraints, rather than an interval. i.e.:
- - `@variable(m, 0 <= x <= 1)` becomes `SingleVariable`-in-`LessThan` *and* `SingleVariable`-in-`GreaterThan`.
+One notable difference is that a variable with an upper and lower bound is
+translated into two constraints, rather than an interval. i.e.:
+ - `@variable(m, 0 <= x <= 1)` becomes `SingleVariable`-in-`LessThan` *and*
+   `SingleVariable`-in-`GreaterThan`.
 
-Therefore, if a solver wrapper does not support `ScalarAffineFunction`-in-`LessThan` constraints, users will not be able to write: `@constraint(m, 2x + y <= 10)` in JuMP. With this in mind, developers should support all the constraint types that they want to be usable from JuMP. That said, from the perspective of JuMP, solvers can safely choose to not support the following constraints:
+Therefore, if a solver wrapper does not support
+`ScalarAffineFunction`-in-`LessThan` constraints, users will not be able to
+write: `@constraint(m, 2x + y <= 10)` in JuMP. With this in mind, developers
+should support all the constraint types that they want to be usable from JuMP.
+That said, from the perspective of JuMP, solvers can safely choose to not
+support the following constraints:
 
-- `ScalarAffineFunction` in `GreaterThan`, `LessThan`, or `EqualTo` with a nonzero constant in the function. Constants in the affine function should instead be moved into the parameters of the corresponding sets.
+- `ScalarAffineFunction` in `GreaterThan`, `LessThan`, or `EqualTo` with a
+  nonzero constant in the function. Constants in the affine function should
+  instead be moved into the parameters of the corresponding sets.
 
-- `ScalarAffineFunction` in `Nonnegative`, `Nonpositive` or `Zeros`. Alternative constraints are available by using a `VectorAffineFunction` with one output row or `ScalarAffineFunction` with `GreaterThan`, `LessThan`, or `EqualTo`.
+- `ScalarAffineFunction` in `Nonnegative`, `Nonpositive` or `Zeros`. Alternative
+  constraints are available by using a `VectorAffineFunction` with one output
+  row or `ScalarAffineFunction` with `GreaterThan`, `LessThan`, or `EqualTo`.
 
-- Two `SingleVariable`-in-`LessThan` constraints applied to the same variable (similarly with `GreaterThan`). These should be interpreted as variable bounds, and each variable naturally has at most one upper or lower bound.
+- Two `SingleVariable`-in-`LessThan` constraints applied to the same variable
+  (similarly with `GreaterThan`). These should be interpreted as variable
+  bounds, and each variable naturally has at most one upper or lower bound.
+
+In addition, when creating functions such as `ScalarAffineFunction` and
+`ScalarQuadraticFunction`, JuMP will aggregate duplicate coefficients. For
+example, `2x + x` will be passed as `3x`, a `ScalarAffineFunction` with one
+`ScalarAffine` term.
 
 ### Column Generation
 
