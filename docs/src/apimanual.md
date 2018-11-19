@@ -844,17 +844,31 @@ twice the value of the `coefficients` field in the `VectorAffineFunction` for
 the corresponding rows. See [`PositiveSemidefiniteConeTriangle`](@ref) for
 details.
 
-
 ### Constraint bridges
 
-A constraint often possess different equivalent formulations, but a solver may only support one of them.
-It would be duplicate work to implement rewritting rules in every solver wrapper for every different formulation of the constraint to express it in the form supported by the solver.
-Constraint bridges provide a way to define a rewritting rule on top of the MOI interface which can be used by any optimizer.
-Some rules also implement constraint modifications and constraint primal and duals translations.
+A constraint can often be written in a number of equivalent formulations. For
+example, the constraint ``l \le a^\top x \le u``
+(`ScalarAffineFunction`-in-`Interval`) could be re-formulated as two
+constraints: ``a^\top x ge l`` (`ScalarAffineFunction`-in-`GreaterThan`) and
+``a^\top x \le u`` (`ScalarAffineFunction`-in-`LessThan`). An alternative
+re-formulation is to add a dummy variable `y` with the constraints ``l \le y \le
+u`` (`SingleVariable`-in-`Interval`) and ``a^\top x - y = 0``
+(`ScalarAffineFunction`-in-`EqualTo`).
 
-For example, the `SplitIntervalBridge` defines the reformulation of a `ScalarAffineFunction`-in-`Interval` constraint into a `ScalarAffineFunction`-in-`GreaterThan` and a `ScalarAffineFunction`-in-`LessThan` constraint.
-The `SplitInterval` is the bridge optimizer that applies the `SplitIntervalBridge` rewritting rule.
-Given an optimizer `optimizer` implementing `ScalarAffineFunction`-in-`GreaterThan` and `ScalarAffineFunction`-in-`LessThan`, the optimizer
+To avoid each solver having to code these transformations manually,
+MathOptInterface provides *bridges*. A bridge is a small transformation from one
+constraint type  to another (potentially collection of) constraint type. Because
+these bridges are included in MathOptInterface, they can be re-used by any
+optimizer. Some bridges also implement constraint modifications and constraint
+primal and duals translations.
+
+For example, the `SplitIntervalBridge` defines the reformulation of a
+`ScalarAffineFunction`-in-`Interval` constraint into a
+`ScalarAffineFunction`-in-`GreaterThan` and a
+`ScalarAffineFunction`-in-`LessThan` constraint. `SplitInterval` is the
+bridge optimizer that applies the `SplitIntervalBridge` rewriting rule. Given
+an optimizer `optimizer` implementing `ScalarAffineFunction`-in-`GreaterThan`
+and `ScalarAffineFunction`-in-`LessThan`, the optimizer
 ```
 bridgedoptimizer = SplitInterval(optimizer)
 ```
@@ -880,6 +894,27 @@ Then, the user can write:
 ```julia
 model = MyPackage.Optimizer()
 MOI.set(model, MyPackage.PrintLevel(), 0)
+```
+
+### Handling duplicate coefficients
+
+Solvers should expect that functions such as `ScalarAffineFunction` and
+`VectorQuadraticFunction` may contain duplicate coefficents, for example,
+`ScalarAffineFunction([ScalarAffineTerm(x, 1), ScalarAffineTerm(x, 1)], 0.0)`.
+These duplicate terms can be aggregated by calling
+`MathOptInterface.Utilities.canonical`.
+
+```jldoctest
+x = MathOptInterface.VariableIndex(1)
+term = MathOptInterface.ScalarAffineTerm(1, x)
+func = MathOptInterface.ScalarAffineFunction([term, term], 0)
+func_canon = MathOptInterface.Utilities.canonical(func)
+func_canon ≈ MathOptInterface.ScalarAffineFunction(
+    [MathOptInterface.ScalarAffineTerm(2, x)], 0)
+
+# Output
+
+true
 ```
 
 ### Implementing copy
@@ -945,11 +980,7 @@ called `Optimizer`):
 MOI defines a very general interface, with multiple possible ways to describe
 the same constraint. This is considered a feature, not a bug. MOI is designed to
 make it possible to experiment with alternative representations of an
-optimization problem at both the solving and modeling level. When implementing
-an interface, it is important to keep in mind that the constraints which a
-solver supports via MOI will have a near 1-to-1 correspondence with how users
-can express problems in JuMP, because JuMP does not perform automatic
-transformations. (Alternative systems like Convex.jl do.) The following bullet
+optimization problem at both the solving and modeling level. The following bullet
 points show examples of how JuMP constraints are translated into MOI
 function-set pairs:
  - `@constraint(m, 2x + y <= 10)` becomes `ScalarAffineFunction`-in-`LessThan`;
@@ -986,11 +1017,6 @@ support the following constraints:
 - Two `SingleVariable`-in-`LessThan` constraints applied to the same variable
   (similarly with `GreaterThan`). These should be interpreted as variable
   bounds, and each variable naturally has at most one upper or lower bound.
-
-In addition, when creating functions such as `ScalarAffineFunction` and
-`ScalarQuadraticFunction`, JuMP will aggregate duplicate coefficients. For
-example, `2x + x` will be passed as `3x`, a `ScalarAffineFunction` with one
-`ScalarAffine` term.
 
 ### Column Generation
 
