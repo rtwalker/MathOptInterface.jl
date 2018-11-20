@@ -857,7 +857,7 @@ u`` (`SingleVariable`-in-`Interval`) and ``a^\top x - y = 0``
 
 To avoid each solver having to code these transformations manually,
 MathOptInterface provides *bridges*. A bridge is a small transformation from one
-constraint type  to another (potentially collection of) constraint type. Because
+constraint type to another (potentially collection of) constraint type. Because
 these bridges are included in MathOptInterface, they can be re-used by any
 optimizer. Some bridges also implement constraint modifications and constraint
 primal and duals translations.
@@ -882,8 +882,8 @@ will additionally support `ScalarAffineFunction`-in-`Interval`.
 
 Solver-specific attributes should either be passed to the optimizer on creation,
 e.g., `MyPackage.Optimizer(PrintLevel = 0)`, or through a sub-type of
-[`AbstractOptimizerAttribute`](@ref). For example, inside `MyPackage`, we could add
-the following:
+[`AbstractOptimizerAttribute`](@ref). For example, inside `MyPackage`, we could
+add the following:
 ```julia
 struct PrintLevel <: MOI.AbstractOptimizerAttribute end
 function MOI.set(model::Optimizer, ::PrintLevel, level::Int)
@@ -904,7 +904,7 @@ Solvers should expect that functions such as `ScalarAffineFunction` and
 These duplicate terms can be aggregated by calling
 `MathOptInterface.Utilities.canonical`.
 
-```jldoctest
+```jldoctest; setup = :(using MathOptInterface)
 x = MathOptInterface.VariableIndex(1)
 term = MathOptInterface.ScalarAffineTerm(1, x)
 func = MathOptInterface.ScalarAffineFunction([term, term], 0)
@@ -912,7 +912,7 @@ func_canon = MathOptInterface.Utilities.canonical(func)
 func_canon ≈ MathOptInterface.ScalarAffineFunction(
     [MathOptInterface.ScalarAffineTerm(2, x)], 0)
 
-# Output
+# output
 
 true
 ```
