@@ -35,7 +35,7 @@ function concrete_bridge_type(::Type{<:SOCRBridge{T}},
     return SOCRBridge{T, F, G}
 end
 
-# Attributes, Bridge acting as an model
+# Attributes, Bridge acting as a model
 function MOI.get(b::SOCRBridge{T, F},
                  ::MOI.NumberOfConstraints{F, MOI.RotatedSecondOrderCone}) where {T, F}
     return 1
