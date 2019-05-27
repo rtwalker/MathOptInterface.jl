@@ -46,8 +46,10 @@ function full_bridge_optimizer(model::MOI.ModelLike, ::Type{T}) where T
     add_bridge(bridged_model, LogDetBridge{T})
     add_bridge(bridged_model, RootDetBridge{T})
     add_bridge(bridged_model, RSOCBridge{T})
+    add_bridge(bridged_model, SOCRBridge{T})
+    # We do not add `SOCtoPSDBridge` as transforming the `SOC` to `RSOC` and
+    # then to `PSD` produces a smaller SDP constraint.
     add_bridge(bridged_model, RSOCtoPSDBridge{T})
-    add_bridge(bridged_model, SOCtoPSDBridge{T})
     add_bridge(bridged_model, MOIB.IndicatorActiveOnFalseBridge{T})
     return bridged_model
 end
@@ -71,6 +73,8 @@ include("intervalbridge.jl")
 const SplitInterval{T, OT<:MOI.ModelLike} = SingleBridgeOptimizer{SplitIntervalBridge{T}, OT}
 include("rsocbridge.jl")
 const RSOC{T, OT<:MOI.ModelLike} = SingleBridgeOptimizer{RSOCBridge{T}, OT}
+include("socr_bridge.jl")
+const SOCR{T, OT<:MOI.ModelLike} = SingleBridgeOptimizer{SOCRBridge{T}, OT}
 include("quadtosocbridge.jl")
 const QuadtoSOC{T, OT<:MOI.ModelLike} = SingleBridgeOptimizer{QuadtoSOCBridge{T}, OT}
 include("geomeanbridge.jl")

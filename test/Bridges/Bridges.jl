@@ -14,6 +14,7 @@ end
     include("functionize_bridge.jl")
     include("intervalbridge.jl")
     include("rsocbridge.jl")
+    include("socr_bridge.jl")
     include("quadtosocbridge.jl")
     include("geomeanbridge.jl")
     include("square_bridge.jl")
