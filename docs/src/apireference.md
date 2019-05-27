@@ -431,6 +431,7 @@ Bridges.ScalarFunctionizeBridge
 Bridges.VectorFunctionizeBridge
 Bridges.SplitIntervalBridge
 Bridges.RSOCBridge
+Bridges.SOCRBridge
 Bridges.QuadtoSOCBridge
 Bridges.GeoMeanBridge
 Bridges.SquareBridge
