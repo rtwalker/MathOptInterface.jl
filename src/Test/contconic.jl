@@ -1587,10 +1587,7 @@ const logdettests = Dict("logdett" => logdetttest,
 
 @moitestset logdet true
 
-function rootdett1vtest(model::MOI.ModelLike, config::TestConfig)
-    println("Called")
-    _det1test(model, config, true, MOI.RootDetConeTriangle)
-end
+rootdett1vtest(model::MOI.ModelLike, config::TestConfig) = _det1test(model, config, true, MOI.RootDetConeTriangle)
 rootdett1ftest(model::MOI.ModelLike, config::TestConfig) = _det1test(model, config, false, MOI.RootDetConeTriangle)
 rootdets1vtest(model::MOI.ModelLike, config::TestConfig) = _det1test(model, config, true, MOI.RootDetConeSquare)
 rootdets1ftest(model::MOI.ModelLike, config::TestConfig) = _det1test(model, config, false, MOI.RootDetConeSquare)

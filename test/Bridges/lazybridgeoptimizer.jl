@@ -251,7 +251,6 @@ end
     full_bridged_mock = MOIB.full_bridge_optimizer(mock, Float64)
     mock.optimize! = (mock::MOIU.MockOptimizer) -> MOIU.mock_optimize!(mock, [1, 1, 0, 1, 1, 0, 1, √2])
     config = MOIT.TestConfig()
-    println("Calling")
     MOIT.rootdett1vtest(full_bridged_mock, config)
     MOIT.rootdett1ftest(full_bridged_mock, config)
     # Dual is not yet implemented for RootDet and GeoMean bridges
