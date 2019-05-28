@@ -451,6 +451,7 @@ function store_bridge(b::AbstractBridgeOptimizer, func::MOI.AbstractFunction,
 end
 function MOI.add_constraint(b::AbstractBridgeOptimizer, f::MOI.AbstractFunction,
                             s::MOI.AbstractSet)
+    println("Called")
     if is_bridged(b, typeof(f), typeof(s))
         # We compute `BridgeType` first as `concrete_bridge_type` calls
         # `bridge_type` which might throw an `UnsupportedConstraint` error in
