@@ -13,7 +13,7 @@ include("simple_model.jl")
 mock = MOIU.MockOptimizer(SimpleModel{Float64}())
 config = MOIT.TestConfig()
 
-@testset "RSOC" begin
+@testset "SOCR" begin
     bridged_mock = MOIB.SOCR{Float64}(mock)
 
     MOIT.basic_constraint_tests(
