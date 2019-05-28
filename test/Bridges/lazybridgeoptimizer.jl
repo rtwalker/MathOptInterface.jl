@@ -2,9 +2,9 @@ using Test
 
 using MathOptInterface
 const MOI = MathOptInterface
-const MOIT = MathOptInterface.Test
-const MOIU = MathOptInterface.Utilities
-const MOIB = MathOptInterface.Bridges
+const MOIT = MOI.Test
+const MOIU = MOI.Utilities
+const MOIB = MOI.Bridges
 
 include("utilities.jl")
 
@@ -251,6 +251,7 @@ end
     full_bridged_mock = MOIB.full_bridge_optimizer(mock, Float64)
     mock.optimize! = (mock::MOIU.MockOptimizer) -> MOIU.mock_optimize!(mock, [1, 1, 0, 1, 1, 0, 1, √2])
     config = MOIT.TestConfig()
+    println("Calling")
     MOIT.rootdett1vtest(full_bridged_mock, config)
     MOIT.rootdett1ftest(full_bridged_mock, config)
     # Dual is not yet implemented for RootDet and GeoMean bridges
