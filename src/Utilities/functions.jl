@@ -83,6 +83,41 @@ function mapvariables(varmap, f::MOI.AbstractFunctionModification)
     return mapvariables(vi -> varmap[vi], f)
 end
 
+# For performance reason, we assume that the type of the function is unchanged
+# by `substitute_variable` and `substitute_variables`.
+function substitute_variable(variable_map::Function,
+                             term::MOI.ScalarAffineTerm{T}) where T
+    return operate(*, T, term.coefficient,
+                       variable_map(term.variable_index))::MOI.ScalarAffineFunction{T}
+end
+function substitute_variable(variable_map::Function,
+                             term::MOI.VectorAffineTerm{T}, n) where T
+    func = substitute_variable(variable_map, term.scalar_term)
+    terms = [MOI.VectorAffineTerm(term.output_index, t) for t in func.terms]
+    constant = zeros(T, n)
+    constant[term.output_index] = func.constant
+    return MOI.VectorAffineFunction(terms, constant)
+end
+function substitute_variables(
+    variable_map::Function,
+    func::MOI.ScalarAffineFunction{T}) where T
+    g = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm{T}[], MOI.constant(func))
+    for term in func.terms
+        operate!(+, T, g, substitute_variable(variable_map, term))::typeof(func)
+    end
+    return g
+end
+function substitute_variables(
+    variable_map::Function,
+    func::MOI.VectorAffineFunction{T}) where T
+    g = MOI.VectorAffineFunction(MOI.VectorAffineTerm{T}[], MOI.constant(func))
+    n = MOI.output_dimension(func)
+    for term in func.terms
+        operate!(+, T, g, substitute_variable(variable_map, term, n))::typeof(func)
+    end
+    return g
+end
+
 # Vector of constants
 constant_vector(f::Union{SAF, SQF}) = [f.constant]
 constant_vector(f::Union{VAF, VQF}) = f.constants

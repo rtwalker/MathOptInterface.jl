@@ -10,27 +10,46 @@ bridged into a constraint `F3`-in-`S3` (supported by the internal model) using b
 it will choose bridge 1 as it allows to bridge `F`-in-`S` using only one bridge instead of two if it uses bridge 2 and 3.
 """
 mutable struct LazyBridgeOptimizer{OT<:MOI.ModelLike} <: AbstractBridgeOptimizer
-    model::OT   # Internal model
+    # Internal model
+    model::OT
+    # Bridged variables
+    variable_map::Variable.Map
+
+    # Bridged constraints
+
     con_to_name::Dict{CI, String}
     name_to_con::Union{Dict{String, MOI.ConstraintIndex}, Nothing}
     # Constraint Index of bridged constraint -> Bridge.
     # It is set to `nothing` when the constraint is deleted.
-    bridges::Vector{Union{Nothing, Constraint.AbstractBridge}}
+    constraint_bridges::Vector{Union{Nothing, Constraint.AbstractBridge}}
     # Constraint Index of bridged constraint -> Constraint type.
     constraint_types::Vector{Tuple{DataType, DataType}}
     # For `SingleVariable` constraints: (variable, set type) -> bridge
     single_variable_constraints::Dict{Tuple{Int64, DataType}, Constraint.AbstractBridge}
+
+    # Bellman-Ford
+
     bridgetypes::Vector{Any} # List of types of available bridges
     dist::Dict{Tuple{DataType, DataType}, Int}      # (F, S) -> Number of bridges that need to be used for an `F`-in-`S` constraint
     best::Dict{Tuple{DataType, DataType}, DataType} # (F, S) -> Bridge to be used for an `F`-in-`S` constraint
 end
 function LazyBridgeOptimizer(model::MOI.ModelLike)
     return LazyBridgeOptimizer{typeof(model)}(
-        model, Dict{CI, String}(), nothing,
+        model, Variable.Map(), Dict{CI, String}(), nothing,
         Union{Nothing, Constraint.AbstractBridge}[], Tuple{DataType, DataType}[],
         Dict{Tuple{Int64, DataType}, Constraint.AbstractBridge}(),
         Any[], Dict{Tuple{DataType, DataType}, Int}(),
         Dict{Tuple{DataType, DataType}, DataType}())
+end
+
+function Constraint.bridges(bridge::LazyBridgeOptimizer)
+    return LazyFilter(bridge -> bridge !== nothing, bridge.constraint_bridges)
+end
+function Constraint.single_variable_constraints(bridge::LazyBridgeOptimizer)
+    return bridge.single_variable_constraints
+end
+function Variable.bridges(bridge::LazyBridgeOptimizer)
+    return bridge.variable_map
 end
 
 function _dist(b::LazyBridgeOptimizer, F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet})
@@ -105,7 +124,10 @@ end
 
 # It only bridges when the constraint is not supporting, hence the name "Lazy"
 function is_bridged(b::LazyBridgeOptimizer, F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet})
-    !MOI.supports_constraint(b.model, F, S)
+    return !MOI.supports_constraint(b.model, F, S)
+end
+function is_bridged(b::LazyBridgeOptimizer, S::Type{<:MOI.AbstractSet})
+    return !MOI.supports_constraint(b.model, MOI.VectorOfVariables, S)
 end
 # Same as supports_constraint but do not trigger `update_constraint!`. This is
 # used inside `update_constraint!`.

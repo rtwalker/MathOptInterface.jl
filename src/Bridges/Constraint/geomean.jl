@@ -116,6 +116,7 @@ end
 
 # Attributes, Bridge acting as a model
 MOI.get(b::GeoMeanBridge, ::MOI.NumberOfVariables) = length(b.xij)
+MOI.get(b::GeoMeanBridge, ::MOI.ListOfVariableIndices) = b.xij
 function MOI.get(b::GeoMeanBridge{T, F},
                  ::MOI.NumberOfConstraints{F, MOI.LessThan{T}}) where {T, F}
     return 1 # t ≤ x_{l1}/sqrt(N)

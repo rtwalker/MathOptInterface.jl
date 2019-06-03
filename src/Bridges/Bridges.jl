@@ -6,10 +6,12 @@ const MOIU = MOI.Utilities
 
 const CI = MOI.ConstraintIndex
 
+include("utilities.jl")
 include("bridge_optimizer.jl")
 
 # Constraint bridges
 include("Constraint/Constraint.jl")
+include("Variable/Variable.jl")
 
 include("lazy_bridge_optimizer.jl")
 

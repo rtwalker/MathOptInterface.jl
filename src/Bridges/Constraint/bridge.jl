@@ -30,14 +30,16 @@ end
 
 The number of variables created by the bridge `b` in the model.
 """
-MOI.get(b::AbstractBridge, ::MOI.NumberOfVariables) = 0
+MOI.get(::AbstractBridge, ::MOI.NumberOfVariables) = 0
+
+MOI.get(::AbstractBridge, ::MOI.ListOfVariableIndices) = MOI.VariableIndex[]
 
 """
     MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints{F, S}) where {F, S}
 
 The number of constraints of the type `F`-in-`S` created by the bridge `b` in the model.
 """
-MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints) = 0
+MOI.get(::AbstractBridge, ::MOI.NumberOfConstraints) = 0
 
 """
     MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints{F, S}) where {F, S}
@@ -45,7 +47,7 @@ MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints) = 0
 A `Vector{ConstraintIndex{F,S}}` with indices of all constraints of
 type `F`-in`S` created by the bride `b` in the model (i.e., of length equal to the value of `NumberOfConstraints{F,S}()`).
 """
-MOI.get(b::AbstractBridge, ::MOI.ListOfConstraintIndices{F, S}) where {F, S} = CI{F, S}[]
+MOI.get(::AbstractBridge, ::MOI.ListOfConstraintIndices{F, S}) where {F, S} = CI{F, S}[]
 
 """
     MOI.supports_constraint(BT::Type{<:AbstractBridge}, F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet})::Bool

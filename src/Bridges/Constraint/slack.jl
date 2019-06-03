@@ -47,10 +47,11 @@ function concrete_bridge_type(::Type{<:ScalarSlackBridge{T}},
 end
 
 # Attributes, Bridge acting as a model
-MOI.get(b::ScalarSlackBridge{T, F, S}, ::MOI.NumberOfVariables) where {T, F, S} = 1
-MOI.get(b::ScalarSlackBridge{T, F, S}, ::MOI.NumberOfConstraints{F, MOI.EqualTo{T}}) where {T, F, S} = 1
+MOI.get(b::ScalarSlackBridge, ::MOI.NumberOfVariables) = 1
+MOI.get(b::ScalarSlackBridge, ::MOI.ListOfVariableIndices) = [b.slack]
+MOI.get(b::ScalarSlackBridge{T, F}, ::MOI.NumberOfConstraints{F, MOI.EqualTo{T}}) where {T, F} = 1
 MOI.get(b::ScalarSlackBridge{T, F, S}, ::MOI.NumberOfConstraints{MOI.SingleVariable, S}) where {T, F, S} = 1
-MOI.get(b::ScalarSlackBridge{T, F, S}, ::MOI.ListOfConstraintIndices{F, MOI.EqualTo{T}}) where {T, F, S} = [b.equality]
+MOI.get(b::ScalarSlackBridge{T, F}, ::MOI.ListOfConstraintIndices{F, MOI.EqualTo{T}}) where {T, F} = [b.equality]
 MOI.get(b::ScalarSlackBridge{T, F, S}, ::MOI.ListOfConstraintIndices{MOI.SingleVariable, S}) where {T, F, S} = [b.slack_in_set]
 
 # Indices
@@ -148,10 +149,11 @@ function concrete_bridge_type(::Type{<:VectorSlackBridge{T}},
 end
 
 # Attributes, Bridge acting as a model
-MOI.get(b::VectorSlackBridge{T, F, S}, ::MOI.NumberOfVariables) where {T, F, S} = length(b.slacks)
-MOI.get(b::VectorSlackBridge{T, F, S}, ::MOI.NumberOfConstraints{F, MOI.Zeros}) where {T, F, S} = 1
+MOI.get(b::VectorSlackBridge, ::MOI.NumberOfVariables) = length(b.slacks)
+MOI.get(b::VectorSlackBridge, ::MOI.ListOfVariableIndices) = b.slacks
+MOI.get(b::VectorSlackBridge{T, F}, ::MOI.NumberOfConstraints{F, MOI.Zeros}) where {T, F} = 1
 MOI.get(b::VectorSlackBridge{T, F, S}, ::MOI.NumberOfConstraints{MOI.VectorOfVariables, S}) where {T, F, S} = 1
-MOI.get(b::VectorSlackBridge{T, F, S}, ::MOI.ListOfConstraintIndices{F, MOI.Zeros}) where {T, F, S} = [b.equality]
+MOI.get(b::VectorSlackBridge{T, F}, ::MOI.ListOfConstraintIndices{F, MOI.Zeros}) where {T, F} = [b.equality]
 MOI.get(b::VectorSlackBridge{T, F, S}, ::MOI.ListOfConstraintIndices{MOI.VectorOfVariables, S}) where {T, F, S} = [b.slacks_in_set]
 
 # Indices

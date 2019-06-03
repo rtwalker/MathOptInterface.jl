@@ -25,13 +25,30 @@ function SingleBridgeOptimizer{BT}(model::OT) where {BT, OT <: MOI.ModelLike}
         Dict{Tuple{Int64, DataType}, AbstractBridge}())
 end
 
-function MOIB.supports_bridging_constraint(b::SingleBridgeOptimizer{BT},
-                                      F::Type{<:MOI.AbstractFunction},
-                                      S::Type{<:MOI.AbstractSet}) where BT
+function bridges(bridge::MOI.Bridges.AbstractBridgeOptimizer)
+    return MOI.Bridges.LazyFilter(bridge -> bridge !== nothing, Union{Nothing, AbstractBridge}[])
+end
+function bridges(bridge::SingleBridgeOptimizer)
+    return MOI.Bridges.LazyFilter(bridge -> bridge !== nothing, bridge.bridges)
+end
+
+function single_variable_constraints(bridge::MOI.Bridges.AbstractBridgeOptimizer)
+    return Dict{Tuple{Int64, DataType}, AbstractBridge}()
+end
+function single_variable_constraints(bridge::SingleBridgeOptimizer)
+    return bridge.single_variable_constraints
+end
+
+function MOIB.supports_bridging_constraint(
+    b::SingleBridgeOptimizer{BT}, F::Type{<:MOI.AbstractFunction},
+    S::Type{<:MOI.AbstractSet}) where BT
     return MOI.supports_constraint(BT, F, S)
 end
 function MOIB.is_bridged(b::SingleBridgeOptimizer, F::Type{<:MOI.AbstractFunction},
                     S::Type{<:MOI.AbstractSet})
     return MOIB.supports_bridging_constraint(b, F, S)
+end
+function MOIB.is_bridged(b::SingleBridgeOptimizer, S::Type{<:MOI.AbstractVectorSet})
+    return false
 end
 MOIB.bridge_type(b::SingleBridgeOptimizer{BT}, ::Type{<:MOI.AbstractFunction}, ::Type{<:MOI.AbstractSet}) where BT = BT

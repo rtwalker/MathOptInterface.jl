@@ -114,7 +114,20 @@ function _lin2test(model::MOI.ModelLike, config::TestConfig, vecofvars::Bool)
     MOI.empty!(model)
     @test MOI.is_empty(model)
 
-    x,y,z,s = MOI.add_variables(model, 4)
+    x = MOI.add_variable(model)
+    @test MOI.get(model, MOI.NumberOfVariables()) == 1
+
+    if vecofvars
+        ys, vc = MOI.add_constrained_variables(model, MOI.Nonpositives(1))
+        y = ys[1]
+    else
+        y = MOI.add_variable(model)
+        func = MOI.VectorAffineFunction{Float64}(MOI.VectorOfVariables([y]))
+        vc = MOI.add_constraint(model, func, MOI.Nonpositives(1))
+    end
+    @test MOI.get(model, MOI.NumberOfVariables()) == 2
+
+    z, s = MOI.add_variables(model, 2)
     @test MOI.get(model, MOI.NumberOfVariables()) == 4
 
     MOI.set(model, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(), MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.([3.0, 2.0, -4.0], [x,y,z]), 0.0))
@@ -122,12 +135,6 @@ function _lin2test(model::MOI.ModelLike, config::TestConfig, vecofvars::Bool)
 
     c = MOI.add_constraint(model, MOI.VectorAffineFunction(MOI.VectorAffineTerm.([1,1,2,3,3], MOI.ScalarAffineTerm.([1.0,-1.0,1.0,1.0,1.0], [x,s,y,x,z])), [4.0,3.0,-12.0]), MOI.Zeros(3))
 
-    vov = MOI.VectorOfVariables([y])
-    if vecofvars
-        vc = MOI.add_constraint(model, vov, MOI.Nonpositives(1))
-    else
-        vc = MOI.add_constraint(model, MOI.VectorAffineFunction{Float64}(vov), MOI.Nonpositives(1))
-    end
     if vecofvars
         # test fallback
         vz = MOI.add_constraint(model, [z], MOI.Nonnegatives(1))
@@ -256,10 +263,10 @@ function lin4test(model::MOI.ModelLike, config::TestConfig)
     MOI.empty!(model)
     @test MOI.is_empty(model)
 
-    x = MOI.add_variable(model)
+    xs, cx = MOI.add_constrained_variables(model, MOI.Nonpositives(1))
+    x = xs[1]
 
     MOI.add_constraint(model, MOI.VectorAffineFunction([MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(1.0, x))], [-1.0]), MOI.Nonnegatives(1))
-    MOI.add_constraint(model, MOI.VectorOfVariables([x]), MOI.Nonpositives(1))
 
     @test MOI.get(model, MOI.NumberOfConstraints{MOI.VectorAffineFunction{Float64},MOI.Nonnegatives}()) == 1
     @test MOI.get(model, MOI.NumberOfConstraints{MOI.VectorOfVariables,MOI.Nonpositives}()) == 1
