@@ -46,7 +46,7 @@ function number_with_set(map::Map, S::Type{<:MOI.AbstractSet})
     return count(isequal(S), map.sets)
 end
 function index_in_vector_of_variables(map::Map, vi::MOI.VariableIndex)
-    return map.index_in_vector_of_variables[-vi.value]
+    return IndexInVector(map.index_in_vector_of_variables[-vi.value])
 end
 has_bridges(map::Map) = !isempty(map.index_in_vector_of_variables)
 function add_keys_for_bridge(map::Map, bridge::AbstractBridge,

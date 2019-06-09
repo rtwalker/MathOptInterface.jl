@@ -1,5 +1,9 @@
 abstract type AbstractBridge end
 
+struct IndexInVector
+    value::Int
+end
+
 """
     bridge_constrained_variables(BT::Type{<:AbstractBridge}, model::MOI.ModelLike,
                                 set::MOI.AbstractVectorSet)
@@ -8,6 +12,11 @@ function bridge_constrained_variables end
 
 function MOI.get(::MOI.ModelLike, attr::MOI.AbstractConstraintAttribute,
                  bridge::AbstractBridge)
+    throw(ArgumentError("Variable bridge of type `$(typeof(bridge))` does not support accessing the attribute `$attr`."))
+end
+
+function MOI.get(::MOI.ModelLike, attr::MOI.AbstractVariableAttribute,
+                 bridge::AbstractBridge, ::IndexInVector)
     throw(ArgumentError("Variable bridge of type `$(typeof(bridge))` does not support accessing the attribute `$attr`."))
 end
 

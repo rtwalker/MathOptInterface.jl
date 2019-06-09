@@ -32,8 +32,20 @@ function MOI.get(::FlipSignBridge{T, S1, S2},
     return [bridge.flipped_constraint]
 end
 
-function MOIB.bridged_function(bridge::FlipSignBridge{T}, i::Integer) where T
-    func = MOI.SingleVariable(bridge.flipped_variables[i])
+
+function MOI.get(model::MOI.ModelLike,
+                 attr::Union{MOI.ConstraintPrimal, MOI.ConstraintDual},
+                 bridge::FlipSignBridge)
+    return -MOI.get(model, attr, bridge.flipped_constraint)
+end
+
+function MOI.get(model::MOI.ModelLike, attr::MOI.VariablePrimal,
+                 bridge::FlipSignBridge, i::IndexInVector)
+    return -MOI.get(model, attr, bridge.flipped_variables[i.value])
+end
+
+function MOIB.bridged_function(bridge::FlipSignBridge{T}, i::IndexInVector) where T
+    func = MOI.SingleVariable(bridge.flipped_variables[i.value])
     return MOIU.operate(-, T, func)
 end
 
