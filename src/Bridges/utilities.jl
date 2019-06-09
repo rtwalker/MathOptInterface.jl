@@ -6,7 +6,7 @@ struct LazyMap{T, VT}
     f::Function
     data::VT
 end
-function LazyMap{T}(f::Function, data::AbstractVector) where {T}
+function LazyMap{T}(f::Function, data) where {T}
     return LazyMap{T, typeof(data)}(f, data)
 end
 function Base.iterate(it::LazyMap, args...)
@@ -38,3 +38,25 @@ function Base.iterate(it::LazyFilter, args...)
 end
 Base.IteratorSize(::LazyFilter) = Base.SizeUnknown()
 Base.eltype(::LazyFilter{T}) where {T} = T
+
+struct LazyCat{VT}
+    data::VT
+end
+function _iterate(it::LazyCat, i, state)
+    while i < length(it.data) && state === nothing
+        i += 1
+        state = iterate(it.data[i])
+    end
+    if state === nothing
+        return nothing
+    else
+        return state[1], (i, state[2])
+    end
+end
+Base.iterate(it::LazyCat) = _iterate(it, 0, nothing)
+function Base.iterate(it::LazyCat, state)
+    i = state[1]
+    return _iterate(it, i, iterate(it.data[i], state[2]))
+end
+Base.IteratorSize(::LazyCat) = Base.SizeUnknown()
+Base.IteratorEltype(::LazyCat) = Base.EltypeUnknown()

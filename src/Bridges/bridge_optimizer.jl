@@ -63,13 +63,7 @@ function bridge_type end
 
 Return the `AbstractBridge` used to bridge the constraint with index `ci`.
 """
-bridge(b::AbstractBridgeOptimizer, ci::CI) = Constraint.bridges(b).data[ci.value]
-# By convention, they should be stored in a `bridges` field using a
-# dictionary-like object.
-function bridge(b::AbstractBridgeOptimizer,
-                ci::CI{MOI.SingleVariable, S}) where S
-    return Constraint.single_variable_constraints(b)[(ci.value, S)]
-end
+bridge(b::AbstractBridgeOptimizer, ci::CI) = Constraint.bridges(b)[ci]
 function bridge(b::AbstractBridgeOptimizer, vi::MOI.VariableIndex)
     return Variable.bridges(b)[vi]
 end
@@ -80,15 +74,14 @@ MOI.optimize!(b::AbstractBridgeOptimizer) = MOI.optimize!(b.model)
 # By convention, the model should be stored in a `model` field
 
 function MOI.is_empty(b::AbstractBridgeOptimizer)
-    return isempty(Constraint.bridges(b).data) &&
-           MOI.is_empty(b.model) && isempty(Constraint.single_variable_constraints(b))
+    return isempty(Variable.bridges(b)) && isempty(Constraint.bridges(b)) &&
+           MOI.is_empty(b.model)
 end
 function MOI.empty!(b::AbstractBridgeOptimizer)
     MOI.empty!(b.model)
-    if !isempty(Constraint.bridges(b).data) || !isempty(Constraint.single_variable_constraints(b))
-        empty!(Constraint.bridges(b).data)
-        empty!(b.constraint_types)
-        empty!(Constraint.single_variable_constraints(b))
+    empty!(Variable.bridges(b))
+    if !isempty(Constraint.bridges(b))
+        empty!(Constraint.bridges(b))
         empty!(b.con_to_name)
         b.name_to_con = nothing
     end
@@ -119,29 +112,17 @@ function MOI.is_valid(b::AbstractBridgeOptimizer, vi::MOI.VariableIndex)
         return MOI.is_valid(b.model, vi)
     end
 end
-function MOI.is_valid(b::AbstractBridgeOptimizer, ci::CI{F, S}) where {F, S}
+function MOI.is_valid(b::AbstractBridgeOptimizer, ci::MOI.ConstraintIndex)
     if is_bridged(b, typeof(ci))
-        return 1 ≤ ci.value ≤ length(Constraint.bridges(b).data) && bridge(b, ci) !== nothing &&
-            (F, S) == b.constraint_types[ci.value]
-    else
-        return MOI.is_valid(b.model, ci)
-    end
-end
-function MOI.is_valid(b::AbstractBridgeOptimizer,
-                      ci::CI{MOI.SingleVariable, S}) where S
-    if is_bridged(b, typeof(ci))
-        return haskey(Constraint.single_variable_constraints(b), (ci.value, S))
+        return haskey(Constraint.bridges(b), ci)
     else
         return MOI.is_valid(b.model, ci)
     end
 end
 function MOI.delete(b::AbstractBridgeOptimizer, vi::MOI.VariableIndex)
     # Delete all `MOI.SingleVariable` constraint of this variable
-    for key in keys(Constraint.single_variable_constraints(b))
-        if key[1] == vi.value
-            MOI.delete(b, MOI.ConstraintIndex{MOI.SingleVariable,
-                                              key[2]}(vi.value))
-        end
+    for ci in Constraint.variable_constraints(Constraint.bridges(b), vi)
+        MOI.delete(b, ci)
     end
     if is_bridged(b, vi)
         if !MOI.is_valid(b, vi)
@@ -153,19 +134,13 @@ function MOI.delete(b::AbstractBridgeOptimizer, vi::MOI.VariableIndex)
         MOI.delete(b.model, vi)
     end
 end
-function _remove_bridge(b, ci)
-    Constraint.bridges(b).data[ci.value] = nothing
-end
-function _remove_bridge(b, ci::MOI.ConstraintIndex{MOI.SingleVariable, S}) where S
-    delete!(Constraint.single_variable_constraints(b), (ci.value, S))
-end
 function MOI.delete(b::AbstractBridgeOptimizer, ci::CI)
     if is_bridged(b, typeof(ci))
         if !MOI.is_valid(b, ci)
             throw(MOI.InvalidIndex(ci))
         end
         MOI.delete(b, bridge(b, ci))
-        _remove_bridge(b, ci)
+        delete!(Constraint.bridges(b), ci)
         b.name_to_con = nothing
         if haskey(b.con_to_name, ci)
             delete!(b.con_to_name, ci)
@@ -190,17 +165,8 @@ function get_all_including_bridged(
     b::AbstractBridgeOptimizer,
     attr::MOI.ListOfConstraintIndices{F, S}) where {F, S}
     if is_bridged(b, F, S)
-        return MOI.ConstraintIndex{F, S}[MOI.ConstraintIndex{F, S}(i) for i in eachindex(Constraint.bridges(b).data) if MOI.is_valid(b, MOI.ConstraintIndex{F, S}(i))]
-    else
-        return MOI.get(b.model, attr)
-    end
-end
-function get_all_including_bridged(
-    b::AbstractBridgeOptimizer,
-    attr::MOI.ListOfConstraintIndices{MOI.SingleVariable, S}) where S
-    F = MOI.SingleVariable
-    if is_bridged(b, F, S)
-        return MOI.ConstraintIndex{F, S}[MOI.ConstraintIndex{F, S}(key[1]) for key in keys(Constraint.single_variable_constraints(b)) if key[2] == S]
+        return collect(Constraint.keys_of_type(Constraint.bridges(b),
+                                               MOI.ConstraintIndex{F, S}))
     else
         return MOI.get(b.model, attr)
     end
@@ -221,10 +187,7 @@ function MOI.get(b::AbstractBridgeOptimizer,
     for bridge in values(Variable.bridges(b))
         _remove_bridged(list, bridge, attr)
     end
-    for bridge in Constraint.bridges(b)
-        _remove_bridged(list, bridge, attr)
-    end
-    for bridge in values(Constraint.single_variable_constraints(b))
+    for bridge in values(Constraint.bridges(b))
         _remove_bridged(list, bridge, attr)
     end
     return list
@@ -234,10 +197,7 @@ function MOI.get(b::AbstractBridgeOptimizer, attr::MOI.NumberOfVariables)
     for bridge in values(Variable.bridges(b))
         s -= MOI.get(bridge, attr)
     end
-    for bridge in Constraint.bridges(b)
-        s -= MOI.get(bridge, attr)
-    end
-    for bridge in values(Constraint.single_variable_constraints(b))
+    for bridge in values(Constraint.bridges(b))
         s -= MOI.get(bridge, attr)
     end
     return s
@@ -247,31 +207,15 @@ end
 function get_all_including_bridged(
     b::AbstractBridgeOptimizer,
     attr::MOI.NumberOfConstraints{F, S}) where {F, S}
-    if is_bridged(b, F, S)
-        return count(i -> MOI.is_valid(b, MOI.ConstraintIndex{F, S}(i)), eachindex(Constraint.bridges(b).data))
+    num = if is_bridged(b, F, S)
+        Constraint.number_of_type(Constraint.bridges(b), MOI.ConstraintIndex{F, S})
     else
-        return MOI.get(b.model, attr)
+        MOI.get(b.model, attr)
     end
-end
-function get_all_including_bridged(
-    b::AbstractBridgeOptimizer,
-    attr::MOI.NumberOfConstraints{MOI.VectorOfVariables, S}) where {S}
-    F = MOI.VectorOfVariables
-    if is_bridged(b, F, S)
-        num = count(i -> MOI.is_valid(b, MOI.ConstraintIndex{F, S}(i)), eachindex(Constraint.bridges(b).data))
-    else
-        num = MOI.get(b.model, attr)
+    if F == MOI.VectorOfVariables
+        num += Variable.number_with_set(Variable.bridges(b), S)
     end
-    return num + Variable.number_with_set(Variable.bridges(b), S)
-end
-function get_all_including_bridged(
-    b::AbstractBridgeOptimizer,
-    attr::MOI.NumberOfConstraints{MOI.SingleVariable, S}) where S
-    if is_bridged(b, MOI.SingleVariable, S)
-        return count(key -> key[2] == S, keys(Constraint.single_variable_constraints(b)))
-    else
-        return MOI.get(b.model, attr)
-    end
+    return num
 end
 function MOI.get(b::AbstractBridgeOptimizer,
                  attr::MOI.NumberOfConstraints{F, S}) where {F, S}
@@ -280,26 +224,14 @@ function MOI.get(b::AbstractBridgeOptimizer,
     for bridge in values(Variable.bridges(b))
         s -= MOI.get(bridge, attr)
     end
-    for bridge in Constraint.bridges(b)
-        s -= MOI.get(bridge, attr)
-    end
-    for bridge in values(Constraint.single_variable_constraints(b))
+    for bridge in values(Constraint.bridges(b))
         s -= MOI.get(bridge, attr)
     end
     return s
 end
 function MOI.get(b::AbstractBridgeOptimizer, attr::MOI.ListOfConstraints)
-    list_of_types = MOI.get(b.model, attr)
-    list_of_bridged_types = Set{Tuple{DataType, DataType}}()
-    for i in eachindex(Constraint.bridges(b).data)
-        if Constraint.bridges(b).data[i] !== nothing
-            push!(list_of_bridged_types, b.constraint_types[i])
-        end
-    end
-    for key in keys(Constraint.single_variable_constraints(b))
-        push!(list_of_bridged_types, (MOI.SingleVariable, key[2]))
-    end
-    list_of_types = [list_of_types; collect(list_of_bridged_types)]
+    list_of_types = copy(MOI.get(b.model, attr))
+    append!(list_of_types, Constraint.list_of_key_types(Constraint.bridges(b)))
     # Some constraint types show up in `list_of_types` including when all the
     # constraints of that type have been created by bridges and not by the user.
     # The code in `NumberOfConstraints` takes care of removing these constraints
@@ -476,17 +408,6 @@ function MOI.supports_constraint(b::AbstractBridgeOptimizer,
         return MOI.supports_constraint(b.model, F, S)
     end
 end
-function store_bridge(b::AbstractBridgeOptimizer, func::MOI.SingleVariable,
-                      set::MOI.AbstractSet, bridge)
-    Constraint.single_variable_constraints(b)[(func.variable.value, typeof(set))] = bridge
-    return MOI.ConstraintIndex{MOI.SingleVariable, typeof(set)}(func.variable.value)
-end
-function store_bridge(b::AbstractBridgeOptimizer, func::MOI.AbstractFunction,
-                      set::MOI.AbstractSet, bridge)
-    push!(Constraint.bridges(b).data, bridge)
-    push!(b.constraint_types, (typeof(func), typeof(set)))
-    return MOI.ConstraintIndex{typeof(func), typeof(set)}(length(Constraint.bridges(b).data))
-end
 function MOI.add_constraint(b::AbstractBridgeOptimizer, f::MOI.AbstractFunction,
                             s::MOI.AbstractSet)
     f = bridged_function(b, f)::typeof(f)
@@ -497,7 +418,8 @@ function MOI.add_constraint(b::AbstractBridgeOptimizer, f::MOI.AbstractFunction,
         BridgeType = Constraint.concrete_bridge_type(b, typeof(f), typeof(s))
         # `add_constraint` might throw an `UnsupportedConstraint` but no
         # modification has been done in the previous line
-        return store_bridge(b, f, s, Constraint.bridge_constraint(BridgeType, b, f, s))
+        bridge = Constraint.bridge_constraint(BridgeType, b, f, s)
+        return Constraint.add_key_for_bridge(Constraint.bridges(b), bridge, f, s)
     else
         return MOI.add_constraint(b.model, f, s)
     end
@@ -532,22 +454,20 @@ end
 # Variables
 MOI.add_variable(b::AbstractBridgeOptimizer) = MOI.add_variable(b.model)
 MOI.add_variables(b::AbstractBridgeOptimizer, n) = MOI.add_variables(b.model, n)
-function store_bridge(b::AbstractBridgeOptimizer, set::MOI.AbstractVectorSet, bridge)
-    return Variable.add_keys_for_bridge(Variable.bridges(b), bridge, set)
-end
-function MOI.add_constrained_variables(bridge::AbstractBridgeOptimizer,
+function MOI.add_constrained_variables(b::AbstractBridgeOptimizer,
                                        set::MOI.AbstractVectorSet)
-    if is_bridged(bridge, typeof(set))
+    if is_bridged(b, typeof(set))
         # TODO actually select it
         BridgeType = Variable.NonposToNonnegBridge{Float64}
-        return store_bridge(bridge, set, Variable.bridge_constrained_variables(BridgeType, bridge, set))
+        bridge = Variable.bridge_constrained_variables(BridgeType, b, set)
+        return Variable.add_keys_for_bridge(Variable.bridges(b), bridge, set)
     else
-        if is_bridged(bridge, MOI.VectorOfVariables, typeof(set))
-            variables = MOI.add_variables(bridge, MOI.dimension(set))
-            constraint = MOI.add_constraint(bridge, MOI.VectorOfVariables(variables), set)
+        if is_bridged(b, MOI.VectorOfVariables, typeof(set))
+            variables = MOI.add_variables(b, MOI.dimension(set))
+            constraint = MOI.add_constraint(b, MOI.VectorOfVariables(variables), set)
             return variables, constraint
         else
-            return MOI.add_constrained_variables(bridge.model, set)
+            return MOI.add_constrained_variables(b.model, set)
         end
     end
 end
