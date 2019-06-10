@@ -98,7 +98,8 @@ function bridge_constraint(::Type{LogDetBridge{T}}, model,
 end
 
 MOI.supports_constraint(::Type{LogDetBridge{T}}, ::Type{<:Union{MOI.VectorOfVariables, MOI.VectorAffineFunction{T}}}, ::Type{MOI.LogDetConeTriangle}) where T = true
-added_constraint_types(::Type{LogDetBridge{T}}, ::Type{<:Union{MOI.VectorOfVariables, MOI.VectorAffineFunction{T}}}, ::Type{MOI.LogDetConeTriangle}) where T = [(MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle), (MOI.VectorAffineFunction{T}, MOI.ExponentialCone), (MOI.ScalarAffineFunction{T}, MOI.LessThan{T})]
+MOIB.added_constrained_variable_types(::Type{<:LogDetBridge}) = Tuple{DataType}[]
+MOIB.added_constraint_types(::Type{LogDetBridge{T}}) where T = [(MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle), (MOI.VectorAffineFunction{T}, MOI.ExponentialCone), (MOI.ScalarAffineFunction{T}, MOI.LessThan{T})]
 
 """
     sublog(model, x::MOI.VariableIndex, y::MOI.VariableIndex, z::MOI.VariableIndex, ::Type{T}) where T
@@ -195,7 +196,8 @@ function bridge_constraint(::Type{RootDetBridge{T}}, model,
 end
 
 MOI.supports_constraint(::Type{RootDetBridge{T}}, ::Type{<:Union{MOI.VectorOfVariables, MOI.VectorAffineFunction{T}}}, ::Type{MOI.RootDetConeTriangle}) where T = true
-added_constraint_types(::Type{RootDetBridge{T}}, ::Type{<:Union{MOI.VectorOfVariables, MOI.VectorAffineFunction{T}}}, ::Type{MOI.RootDetConeTriangle}) where T = [(MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle), (MOI.VectorAffineFunction{T}, MOI.GeometricMeanCone)]
+MOIB.added_constrained_variable_types(::Type{<:RootDetBridge}) = Tuple{DataType}[]
+MOIB.added_constraint_types(::Type{RootDetBridge{T}}) where T = [(MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle), (MOI.VectorAffineFunction{T}, MOI.GeometricMeanCone)]
 
 # Attributes, Bridge acting as a model
 MOI.get(b::RootDetBridge, ::MOI.NumberOfVariables) = length(b.Δ)

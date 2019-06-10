@@ -42,10 +42,10 @@ function supports_bridging_constraint(::AbstractBridgeOptimizer,
     return false
 end
 
-function supports_bridging_constrained_variables(
-    ::AbstractBridgeOptimizer, ::Type{<:MOI.AbstractVectorSet})
-    return false
-end
+#function supports_bridging_constrained_variables(
+#    ::AbstractBridgeOptimizer, ::Type{<:MOI.AbstractVectorSet})
+#    return false
+#end
 
 
 """
@@ -482,11 +482,21 @@ end
 # Variables
 MOI.add_variable(b::AbstractBridgeOptimizer) = MOI.add_variable(b.model)
 MOI.add_variables(b::AbstractBridgeOptimizer, n) = MOI.add_variables(b.model, n)
+
+#function MOI.supports_constrained_variables(b::AbstractBridgeOptimizer,
+#                                            S::Type{<:MOI.AbstractVectorSet})
+#    if is_bridged(b, S)
+#        return supports_bridging_constrained_variables(b, S)
+#    else
+#        return MOI.supports_constrained_variables(b.model, S)
+#    end
+#end
 function MOI.add_constrained_variables(b::AbstractBridgeOptimizer,
                                        set::MOI.AbstractVectorSet)
     if is_bridged(b, typeof(set))
         # TODO actually select it
-        BridgeType = Variable.NonposToNonnegBridge{Float64}
+        BridgeType = Variable.concrete_bridge_type(b, typeof(set))
+        #BridgeType = Variable.NonposToNonnegBridge{Float64}
         bridge = Variable.bridge_constrained_variables(BridgeType, b, set)
         return Variable.add_keys_for_bridge(Variable.bridges(b), bridge, set)
     else

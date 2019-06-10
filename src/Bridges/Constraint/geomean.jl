@@ -101,7 +101,8 @@ function MOI.supports_constraint(::Type{GeoMeanBridge{T}},
                                 ::Type{MOI.GeometricMeanCone}) where T
     return true
 end
-function added_constraint_types(::Type{GeoMeanBridge{T, F, G}}) where {T, F, G}
+MOIB.added_constrained_variable_types(::Type{<:GeoMeanBridge}) = Tuple{DataType}[]
+function MOIB.added_constraint_types(::Type{GeoMeanBridge{T, F, G}}) where {T, F, G}
     return [(F, MOI.LessThan{T}), (G, MOI.RotatedSecondOrderCone)]
 end
 function concrete_bridge_type(::Type{<:GeoMeanBridge{T}},

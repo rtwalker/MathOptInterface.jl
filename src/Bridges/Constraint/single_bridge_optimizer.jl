@@ -177,4 +177,8 @@ end
 function MOIB.is_bridged(b::SingleBridgeOptimizer, S::Type{<:MOI.AbstractVectorSet})
     return false
 end
-MOIB.bridge_type(b::SingleBridgeOptimizer{BT}, ::Type{<:MOI.AbstractFunction}, ::Type{<:MOI.AbstractSet}) where BT = BT
+function MOIB.bridge_type(::SingleBridgeOptimizer{BT},
+                          ::Type{<:MOI.AbstractFunction},
+                          ::Type{<:MOI.AbstractSet}) where BT
+    return BT
+end

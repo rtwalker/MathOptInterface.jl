@@ -15,4 +15,9 @@ include("single_bridge_optimizer.jl")
 include("flip_sign.jl")
 const NonposToNonneg{T, OT<:MOI.ModelLike} = SingleBridgeOptimizer{NonposToNonnegBridge{T}, OT}
 
+function add_all_bridges(bridged_model, T::Type)
+    MOIB.add_bridge(bridged_model, NonposToNonnegBridge{T})
+    return
+end
+
 end

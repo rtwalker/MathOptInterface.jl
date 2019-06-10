@@ -36,7 +36,8 @@ MOI.supports_constraint(::Type{ScalarSlackBridge{T}},
 MOI.supports_constraint(::Type{ScalarSlackBridge{T}},
                         ::Type{<:MOI.AbstractScalarFunction},
                         ::Type{<:MOI.EqualTo}) where {T} = false
-function added_constraint_types(::Type{ScalarSlackBridge{T, F, S}}) where {T, F, S}
+MOIB.added_constrained_variable_types(::Type{<:ScalarSlackBridge}) = Tuple{DataType}[]
+function MOIB.added_constraint_types(::Type{ScalarSlackBridge{T, F, S}}) where {T, F, S}
     return [(F, MOI.EqualTo{T}), (MOI.SingleVariable, S)]
 end
 function concrete_bridge_type(::Type{<:ScalarSlackBridge{T}},
@@ -138,7 +139,8 @@ MOI.supports_constraint(::Type{VectorSlackBridge{T}},
 MOI.supports_constraint(::Type{VectorSlackBridge{T}},
                         ::Type{<:MOI.VectorOfVariables},
                         ::Type{<:MOI.AbstractVectorSet}) where {T} = false
-function added_constraint_types(::Type{VectorSlackBridge{T, F, S}}) where {T, F<:MOI.AbstractVectorFunction, S}
+MOIB.added_constrained_variable_types(::Type{<:VectorSlackBridge}) = Tuple{DataType}[]
+function MOIB.added_constraint_types(::Type{VectorSlackBridge{T, F, S}}) where {T, F<:MOI.AbstractVectorFunction, S}
     return [(F, MOI.Zeros), (MOI.VectorOfVariables, S)]
 end
 function concrete_bridge_type(::Type{<:VectorSlackBridge{T}},

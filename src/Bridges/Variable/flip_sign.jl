@@ -9,9 +9,16 @@ stored in the `flipped_constraint` field by convention.
 abstract type FlipSignBridge{
     T, S1<:MOI.AbstractSet, S2<:MOI.AbstractSet} <: AbstractBridge end
 
-function MOI.supports_constrained_variables(
+function supports_constrained_variables(
     ::Type{<:FlipSignBridge{T, S1}}, ::Type{S1}) where {T, S1<:MOI.AbstractVectorSet}
     return true
+end
+function MOIB.added_constrained_variable_types(
+    ::Type{<:FlipSignBridge{T, S1, S2}}) where {T, S1, S2}
+    return [(S2,)]
+end
+function MOIB.added_constraint_types(::Type{<:FlipSignBridge})
+    return Tuple{DataType, DataType}[]
 end
 
 # Attributes, Bridge acting as an model

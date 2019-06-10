@@ -28,13 +28,47 @@ The number of constraints of the type `F`-in-`S` created by the bridge `b` in th
 MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints) = 0
 
 """
-    MOI.supports_constrained_variables(::Type{<:AbstractBridge},
+    supports_constrained_variables(::Type{<:AbstractBridge},
                                        ::Type{<:MOI.AbstractVectorSet})::Bool
 
 Return a `Bool` indicating whether the bridges of type `BT` support bridging
 constrained variables in `S`.
 """
-function MOI.supports_constrained_variables(::Type{<:AbstractBridge},
-                                            ::Type{<:MOI.AbstractVectorSet})
+function supports_constrained_variables(::Type{<:AbstractBridge},
+                                        ::Type{<:MOI.AbstractVectorSet})
     return false
+end
+
+"""
+    added_constrained_variable_types(BT::Type{<:AbstractBridge},
+                                     S::Type{<:MOI.AbstractSet})
+
+Return a list of the types of constraints that bridges of type `BT` add for
+bridging constrained variabled in `S`.
+"""
+function MOIB.added_constrained_variable_types(BT::Type{<:AbstractBridge},
+                                     S::Type{<:MOI.AbstractSet})
+    MOIB.added_constrained_variable_types(concrete_bridge_type(BT, S))
+end
+
+"""
+    added_constraint_types(BT::Type{<:AbstractBridge},
+                                     S::Type{<:MOI.AbstractSet})
+
+Return a list of the types of constrained variables that bridges of type `BT` add
+for bridging constrained variabled in `S`.
+"""
+function MOIB.added_constraint_types(BT::Type{<:AbstractBridge},
+                                     S::Type{<:MOI.AbstractSet})
+    MOIB.added_constraint_types(concrete_bridge_type(BT, S))
+end
+
+function concrete_bridge_type(bridge_type::DataType,
+                              ::Type{<:MOI.AbstractSet})
+    return bridge_type
+end
+
+function concrete_bridge_type(b::MOIB.AbstractBridgeOptimizer,
+                              S::Type{<:MOI.AbstractSet})
+    return concrete_bridge_type(MOIB.bridge_type(b, S), S)
 end

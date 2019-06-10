@@ -8,6 +8,22 @@ const MOIB = MathOptInterface.Bridges
 
 include("utilities.jl")
 
+# Model similar to SDPA format, it gives a good example because it does not
+# support a lot hence need a lot of bridges
+MOIU.@model(SDPAModel,
+            (), (), (MOI.Nonnegatives, MOI.PositiveSemidefiniteConeTriangle), (),
+            (), (MOI.ScalarAffineFunction,), (MOI.VectorOfVariables,), ())
+
+@testset "SDPA format with $T" for T in [Float64, Int]
+    model = SDPAModel{T}()
+    bridged = MOIB.LazyBridgeOptimizer(model)
+    @test !MOI.supports_constraint(model, MOI.VectorOfVariables, MOI.Nonpositives)
+    @test !MOI.supports_constraint(bridged, MOI.VectorOfVariables, MOI.Nonpositives)
+    MOIB.add_bridge(bridged, MOIB.Variable.NonposToNonnegBridge{T})
+    @test MOI.supports_constraint(bridged, MOI.VectorOfVariables, MOI.Nonpositives)
+    @test MOIB.bridge_type(bridged, MOI.Nonpositives) == MOIB.Variable.NonposToNonnegBridge{T}
+end
+
 # Model not supporting RotatedSecondOrderCone
 MOIU.@model(NoRSOCModel,
             (),
@@ -78,7 +94,8 @@ function MOI.supports_constraint(
 end
 
 struct BridgeAddingNoConstraint{T} <: MOI.Bridges.Constraint.AbstractBridge end
-MOIB.Constraint.added_constraint_types(::Type{BridgeAddingNoConstraint{T}}) where {T} = []
+MOIB.added_constrained_variable_types(::Type{<:BridgeAddingNoConstraint}) = Tuple{DataType}[]
+MOIB.added_constraint_types(::Type{<:BridgeAddingNoConstraint}) = Tuple{DataType, DataType}[]
 function MOI.supports_constraint(::Type{<:BridgeAddingNoConstraint},
                                  ::Type{MOI.SingleVariable},
                                  ::Type{MOI.Integer})
@@ -175,8 +192,8 @@ end
     @test MOIB.bridge_type(bridged_mock, MOI.VectorOfVariables,
                 MOI.RotatedSecondOrderCone) == MOIB.Constraint.RSOCtoPSDBridge{Float64, MOI.VectorOfVariables}
     @test MOIB.bridge(bridged_mock, c) isa MOIB.Constraint.RSOCtoPSDBridge
-    @test bridged_mock.dist[(MOI.VectorOfVariables,
-                            MOI.RotatedSecondOrderCone)] == 1
+    @test bridged_mock.constraint_dist[(MOI.VectorOfVariables,
+                                        MOI.RotatedSecondOrderCone)] == 1
 end
 
 @testset "Supports" begin

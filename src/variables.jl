@@ -34,10 +34,10 @@ done in the current state of the model `model`.
 """
 add_variable(model::ModelLike) = throw(AddVariableNotAllowed())
 
-function supports_constrained_variables(
-    model::ModelLike, S::Type{<:AbstractVectorSet})
-    return MOI.supports_constraint(model, MOI.VectorOfVariables, S)
-end
+#function supports_constrained_variables(
+#    model::ModelLike, S::Type{<:AbstractVectorSet})
+#    return MOI.supports_constraint(model, MOI.VectorOfVariables, S)
+#end
 function add_constrained_variables(model::ModelLike, set::AbstractVectorSet)
     variables = add_variables(model, dimension(set))
     constraint = add_constraint(model, VectorOfVariables(variables), set)
