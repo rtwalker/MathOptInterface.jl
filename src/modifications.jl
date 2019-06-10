@@ -1,6 +1,6 @@
 """
     struct ModifyConstraintNotAllowed{F<:AbstractFunction, S<:AbstractSet,
-                                             C<:AbstractFunctionModification} <: NotAllowedError
+                                      C<:AbstractFunctionModification} <: NotAllowedError
         constraint_index::ConstraintIndex{F, S}
         change::C
         message::String
@@ -10,14 +10,16 @@ An error indicating that the constraint modification `change` cannot be applied
 to the constraint of index `ci`.
 """
 struct ModifyConstraintNotAllowed{F<:AbstractFunction, S<:AbstractSet,
-                                         C<:AbstractFunctionModification} <: NotAllowedError
+                                  C<:AbstractFunctionModification} <: NotAllowedError
     constraint_index::ConstraintIndex{F, S}
     change::C
     message::String
 end
-function ModifyConstraintNotAllowed(ci::ConstraintIndex{F, S},
-                                change::AbstractFunctionModification) where {F<:AbstractFunction, S<:AbstractSet}
-    ModifyConstraintNotAllowed{F, S, typeof(change)}(ci, change, "")
+function ModifyConstraintNotAllowed(
+    ci::ConstraintIndex{F, S},
+    change::AbstractFunctionModification,
+    message="") where {F<:AbstractFunction, S<:AbstractSet}
+    ModifyConstraintNotAllowed{F, S, typeof(change)}(ci, change, message)
 end
 
 operation_name(err::ModifyConstraintNotAllowed{F, S}) where {F, S} = "Modifying the constraints $(err.constraint_index) with $(err.change)"

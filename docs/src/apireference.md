@@ -451,7 +451,8 @@ A bridge should implement the following functions to be usable by a bridge optim
 supports_constraint(::Type{<:Bridges.Constraint.AbstractBridge}, ::Type{<:AbstractFunction}, ::Type{<:AbstractSet})
 Bridges.Constraint.concrete_bridge_type
 Bridges.Constraint.bridge_constraint
-Bridges.Constraint.added_constraint_types
+Bridges.added_constrained_variable_types
+Bridges.added_constraint_types
 ```
 
 When querying the [`NumberOfVariables`](@ref), [`NumberOfConstraints`](@ref)

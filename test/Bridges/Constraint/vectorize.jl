@@ -56,7 +56,7 @@ config = MOIT.TestConfig()
 
     MOIU.set_mock_optimize!(mock,
          (mock::MOIU.MockOptimizer) -> MOIU.mock_optimize!(mock, [0, 1/2, 1],
-             (MOI.VectorAffineFunction{Float64}, MOI.Nonpositives) => [[-1], [-2]],
+             (MOI.VectorAffineFunction{Float64}, MOI.Nonpositives) => [[-2], [-1]],
              (MOI.VectorAffineFunction{Float64}, MOI.Nonnegatives) => [[2], [0], [0]]),
          (mock::MOIU.MockOptimizer) -> MOIU.mock_optimize!(mock, [1],
              (MOI.VectorAffineFunction{Float64}, MOI.Nonpositives) => [[-1]],

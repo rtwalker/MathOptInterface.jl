@@ -7,17 +7,24 @@ struct Map <: AbstractDict{MOI.VariableIndex, AbstractBridge}
     # `i` -> `bridge`: `VariableIndex(-i)` was bridged by `bridge`.
     bridges::Vector{Union{Nothing, AbstractBridge}}
     sets::Vector{Union{Nothing, DataType}}
+    unbridged_function::Dict{MOI.VariableIndex, MOI.AbstractScalarFunction}
 end
-Map() = Map(Int[], Union{Nothing, AbstractBridge}[], Union{Nothing, DataType}[])
+Map() = Map(Int[], Union{Nothing, AbstractBridge}[], Union{Nothing, DataType}[], Dict{MOI.VariableIndex, MOI.AbstractScalarFunction}())
 Base.isempty(map::Map) = all(bridge -> bridge === nothing, map.bridges)
 function Base.empty!(map::Map)
     empty!(map.index_in_vector_of_variables)
     empty!(map.bridges)
     empty!(map.sets)
+    empty!(map.unbridged_function)
     return map
 end
 function bridge_index(map::Map, vi::MOI.VariableIndex)
-    return -vi.value - map.index_in_vector_of_variables[-vi.value] + 1
+    index = map.index_in_vector_of_variables[-vi.value]
+    if iszero(index)
+        return -vi.value
+    else
+        return -vi.value - index + 1
+    end
 end
 function Base.haskey(map::Map, vi::MOI.VariableIndex)
     return -length(map.bridges) ≤ vi.value ≤ -1 &&
@@ -27,8 +34,8 @@ function Base.getindex(map::Map, vi::MOI.VariableIndex)
     return map.bridges[bridge_index(map, vi)]
 end
 function Base.delete!(map::Map, vi::MOI.VariableIndex)
-    map.bridges[bridge_index(vi)] = nothing
-    map.sets[bridge_index(vi)] = nothing
+    map.bridges[bridge_index(map, vi)] = nothing
+    map.sets[bridge_index(map, vi)] = nothing
     return map
 end
 function Base.keys(map::Map)
@@ -49,6 +56,16 @@ function index_in_vector_of_variables(map::Map, vi::MOI.VariableIndex)
     return IndexInVector(map.index_in_vector_of_variables[-vi.value])
 end
 has_bridges(map::Map) = !isempty(map.index_in_vector_of_variables)
+function add_key_for_bridge(map::Map, bridge::AbstractBridge,
+                            set::MOI.AbstractScalarSet)
+    index = -(length(map.bridges) + 1)
+    variable = MOI.VariableIndex(index)
+    push!(map.index_in_vector_of_variables, 0)
+    push!(map.bridges, bridge)
+    push!(map.sets, typeof(set))
+    push!(map.unbridged_function, unbridged_map(bridge, variable))
+    return variable, MOI.ConstraintIndex{MOI.SingleVariable, typeof(set)}(index)
+end
 function add_keys_for_bridge(map::Map, bridge::AbstractBridge,
                              set::MOI.AbstractVectorSet)
     if iszero(MOI.dimension(set))
@@ -64,6 +81,10 @@ function add_keys_for_bridge(map::Map, bridge::AbstractBridge,
             push!(map.bridges, nothing)
             push!(map.sets, nothing)
         end
+        for i in 1:MOI.dimension(set)
+            push!(map.unbridged_function, unbridged_map(bridge, variables[i],
+                                                        IndexInVector(i)))
+        end
         index = first(variables).value
         return variables, MOI.ConstraintIndex{MOI.VectorOfVariables, typeof(set)}(index)
     end
@@ -77,6 +98,9 @@ function Base.iterate(map::Map, state=1)
     else
         return MOI.VariableIndex(-state) => map.bridges[state], state + 1
     end
+end
+function unbridged_function(map::Map, vi::MOI.VariableIndex)
+    return get(map.unbridged_function, vi, MOI.SingleVariable(vi))
 end
 
 struct EmptyMap <: AbstractDict{MOI.VariableIndex, AbstractBridge} end
@@ -110,17 +134,25 @@ end
 bridges(bridge::SingleBridgeOptimizer) = bridge.map
 
 function MOIB.supports_bridging_constraint(
+    b::SingleBridgeOptimizer{BT}, ::Type{MOI.SingleVariable},
+    S::Type{<:MOI.AbstractScalarSet}) where BT
+    return supports_constrained_variables(BT, S)
+end
+function MOIB.supports_bridging_constraint(
     b::SingleBridgeOptimizer{BT}, ::Type{MOI.VectorOfVariables},
     S::Type{<:MOI.AbstractVectorSet}) where BT
     return supports_constrained_variables(BT, S)
+end
+function MOIB.is_bridged(b::SingleBridgeOptimizer, S::Type{<:MOI.AbstractScalarSet})
+    return MOIB.supports_bridging_constraint(b, MOI.SingleVariable, S)
+end
+function MOIB.is_bridged(b::SingleBridgeOptimizer, S::Type{<:MOI.AbstractVectorSet})
+    return MOIB.supports_bridging_constraint(b, MOI.VectorOfVariables, S)
 end
 function MOIB.is_bridged(::SingleBridgeOptimizer,
                          ::Type{<:MOI.AbstractFunction},
                          ::Type{<:MOI.AbstractSet})
     return false
-end
-function MOIB.is_bridged(b::SingleBridgeOptimizer, S::Type{<:MOI.AbstractVectorSet})
-    return MOIB.supports_bridging_constraint(b, MOI.VectorOfVariables, S)
 end
 function MOIB.bridge_type(::SingleBridgeOptimizer{BT},
                           ::Type{<:MOI.AbstractSet}) where BT

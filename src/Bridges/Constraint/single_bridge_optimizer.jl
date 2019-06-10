@@ -128,7 +128,7 @@ function Base.iterate(map::Map, state)
     if state[1] == 1
         return _iterate1(map, state[2])
     else
-        return _iterate2(map, iterate(map.single_variable_constraint, state[2]))
+        return _iterate2(map, iterate(map.single_variable_constraints, state[2]))
     end
 end
 
@@ -174,7 +174,7 @@ function MOIB.is_bridged(b::SingleBridgeOptimizer, F::Type{<:MOI.AbstractFunctio
                     S::Type{<:MOI.AbstractSet})
     return MOIB.supports_bridging_constraint(b, F, S)
 end
-function MOIB.is_bridged(b::SingleBridgeOptimizer, S::Type{<:MOI.AbstractVectorSet})
+function MOIB.is_bridged(b::SingleBridgeOptimizer, S::Type{<:MOI.AbstractSet})
     return false
 end
 function MOIB.bridge_type(::SingleBridgeOptimizer{BT},

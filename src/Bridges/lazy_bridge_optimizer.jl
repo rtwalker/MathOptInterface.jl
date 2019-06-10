@@ -42,8 +42,10 @@ function Constraint.bridges(bridge::LazyBridgeOptimizer)
     return bridge.constraint_map
 end
 
+variable_function(::Type{<:MOI.AbstractScalarSet}) = MOI.SingleVariable
+variable_function(::Type{<:MOI.AbstractVectorSet}) = MOI.VectorOfVariables
 function _dist(b::LazyBridgeOptimizer, S::Type{<:MOI.AbstractSet})
-    if MOI.supports_constraint(b.model, MOI.VectorOfVariables, S)
+    if MOI.supports_constraint(b.model, variable_function(S), S)
         return 0
     else
         return get(b.variable_dist, (S,), typemax(Int))
@@ -203,19 +205,19 @@ function is_bridged(b::LazyBridgeOptimizer, F::Type{<:MOI.AbstractFunction}, S::
     return !MOI.supports_constraint(b.model, F, S)
 end
 function is_bridged(b::LazyBridgeOptimizer, S::Type{<:MOI.AbstractSet})
-    return !MOI.supports_constraint(b.model, MOI.VectorOfVariables, S)
+    return !MOI.supports_constraint(b.model, variable_function(S), S)
 end
 # Same as supports_constraint but do not trigger `update!`. This is
 # used inside `update!`.
-function supports_no_update(b::LazyBridgeOptimizer, S::Type{<:MOI.AbstractVectorSet})
-    return MOI.supports_constraint(b.model, MOI.VectorOfVariables, S) || (S,) in keys(b.variable_best)
+function supports_no_update(b::LazyBridgeOptimizer, S::Type{<:MOI.AbstractSet})
+    return MOI.supports_constraint(b.model, variable_function(S), S) || (S,) in keys(b.variable_best)
 end
 function supports_no_update(b::LazyBridgeOptimizer, F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet})
     return MOI.supports_constraint(b.model, F, S) || (F, S) in keys(b.constraint_best)
 end
 
 function supports_bridging_constraint(b::LazyBridgeOptimizer,
-                                      F::Type{MOI.VectorOfVariables},
+                                      F::Type{<:Union{MOI.VectorOfVariables, MOI.SingleVariable}},
                                       S::Type{<:MOI.AbstractSet})
     update!(b, (S,))
     update!(b, (F, S))
@@ -231,7 +233,7 @@ function bridge_type(b::LazyBridgeOptimizer{BT}, S::Type{<:MOI.AbstractSet}) whe
     update!(b, (S,))
     result = get(b.variable_best, (S,), nothing)
     if result === nothing
-        throw(MOI.UnsupportedConstraint{MOI.VectorOfVariables, S}())
+        throw(MOI.UnsupportedConstraint{variable_function(S), S}())
     end
     return result
 end

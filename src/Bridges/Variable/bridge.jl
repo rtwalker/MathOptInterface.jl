@@ -4,6 +4,8 @@ struct IndexInVector
     value::Int
 end
 
+function bridge_constrained_variable end
+
 """
     bridge_constrained_variables(BT::Type{<:AbstractBridge}, model::MOI.ModelLike,
                                 set::MOI.AbstractVectorSet)
@@ -29,13 +31,13 @@ MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints) = 0
 
 """
     supports_constrained_variables(::Type{<:AbstractBridge},
-                                       ::Type{<:MOI.AbstractVectorSet})::Bool
+                                   ::Type{<:MOI.AbstractSet})::Bool
 
 Return a `Bool` indicating whether the bridges of type `BT` support bridging
 constrained variables in `S`.
 """
 function supports_constrained_variables(::Type{<:AbstractBridge},
-                                        ::Type{<:MOI.AbstractVectorSet})
+                                        ::Type{<:MOI.AbstractSet})
     return false
 end
 

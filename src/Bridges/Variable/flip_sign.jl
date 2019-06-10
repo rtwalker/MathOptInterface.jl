@@ -21,13 +21,11 @@ function MOIB.added_constraint_types(::Type{<:FlipSignBridge})
     return Tuple{DataType, DataType}[]
 end
 
-# Attributes, Bridge acting as an model
-function MOI.get(bridge::FlipSignBridge{T, <:MOI.AbstractVectorSet},
-                 ::MOI.NumberOfVariables) where T
+# Attributes, Bridge acting as a model
+function MOI.get(bridge::FlipSignBridge, ::MOI.NumberOfVariables)
     return length(bridge.flipped_variables)
 end
-function MOI.get(bridge::FlipSignBridge{T, <:MOI.AbstractVectorSet},
-                 ::MOI.ListOfVariableIndices) where T
+function MOI.get(bridge::FlipSignBridge, ::MOI.ListOfVariableIndices)
     return bridge.flipped_variables
 end
 function MOI.get(::FlipSignBridge{T, S1, S2},
@@ -39,6 +37,7 @@ function MOI.get(::FlipSignBridge{T, S1, S2},
     return [bridge.flipped_constraint]
 end
 
+# Attributes, Bridge acting as a constraint
 
 function MOI.get(model::MOI.ModelLike,
                  attr::Union{MOI.ConstraintPrimal, MOI.ConstraintDual},
@@ -54,6 +53,11 @@ end
 function MOIB.bridged_function(bridge::FlipSignBridge{T}, i::IndexInVector) where T
     func = MOI.SingleVariable(bridge.flipped_variables[i.value])
     return MOIU.operate(-, T, func)
+end
+function unbridged_map(bridge::FlipSignBridge{T}, vi::MOI.VariableIndex,
+                       i::IndexInVector) where T
+    func = MOIU.operate(-, T, MOI.SingleVariable(vi))
+    return bridge.flipped_variables[i.value] => func
 end
 
 """
