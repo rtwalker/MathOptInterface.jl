@@ -1,4 +1,4 @@
-abstract type AbstractBridge end
+abstract type AbstractBridge <: MOIB.AbstractBridge end
 
 struct IndexInVector
     value::Int
@@ -28,6 +28,11 @@ end
 The number of constraints of the type `F`-in-`S` created by the bridge `b` in the model.
 """
 MOI.get(b::AbstractBridge, ::MOI.NumberOfConstraints) = 0
+
+function MOI.get(::AbstractBridge,
+                 ::MOI.ListOfConstraintIndices{F, S}) where {F, S}
+    return MOI.ConstraintIndex{F, S}[]
+end
 
 """
     supports_constrained_variables(::Type{<:AbstractBridge},

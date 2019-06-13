@@ -1,3 +1,10 @@
+abstract type AbstractBridge end
+
+function needs_fallback(::MOI.ModelLike, ::MOI.AbstractConstraintAttribute,
+                        ::AbstractBridge)
+    return false
+end
+
 """
     added_constraint_types(BT::Type{<:Variable.AbstractBridge})::Bool
 

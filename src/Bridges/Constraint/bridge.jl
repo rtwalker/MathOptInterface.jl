@@ -6,7 +6,7 @@ These can be obtained using `MOI.NumberOfConstraints` and `MOI.ListOfConstraintI
 Attributes of the bridged model such as `MOI.ConstraintDual` and `MOI.ConstraintPrimal`, can be obtained using the bridge in place of the constraint index.
 These calls are used by the `AbstractBridgeOptimizer` to communicate with the bridge so they should be implemented by the bridge.
 """
-abstract type AbstractBridge end
+abstract type AbstractBridge <: MOIB.AbstractBridge end
 
 """
     bridge_constraint(BT::Type{<:AbstractBridge}, model::MOI.ModelLike,
@@ -47,7 +47,10 @@ MOI.get(::AbstractBridge, ::MOI.NumberOfConstraints) = 0
 A `Vector{ConstraintIndex{F,S}}` with indices of all constraints of
 type `F`-in`S` created by the bride `b` in the model (i.e., of length equal to the value of `NumberOfConstraints{F,S}()`).
 """
-MOI.get(::AbstractBridge, ::MOI.ListOfConstraintIndices{F, S}) where {F, S} = CI{F, S}[]
+function MOI.get(::AbstractBridge,
+                 ::MOI.ListOfConstraintIndices{F, S}) where {F, S}
+    return MOI.ConstraintIndex{F, S}[]
+end
 
 """
     MOI.supports_constraint(BT::Type{<:AbstractBridge}, F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet})::Bool

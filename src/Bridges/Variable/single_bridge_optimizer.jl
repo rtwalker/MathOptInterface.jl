@@ -63,7 +63,10 @@ function add_key_for_bridge(map::Map, bridge::AbstractBridge,
     push!(map.index_in_vector_of_variables, 0)
     push!(map.bridges, bridge)
     push!(map.sets, typeof(set))
-    push!(map.unbridged_function, unbridged_map(bridge, variable))
+    mapping = unbridged_map(bridge, variable)
+    if mapping !== nothing
+        push!(map.unbridged_function, mapping)
+    end
     return variable, MOI.ConstraintIndex{MOI.SingleVariable, typeof(set)}(index)
 end
 function add_keys_for_bridge(map::Map, bridge::AbstractBridge,
@@ -82,12 +85,29 @@ function add_keys_for_bridge(map::Map, bridge::AbstractBridge,
             push!(map.sets, nothing)
         end
         for i in 1:MOI.dimension(set)
-            push!(map.unbridged_function, unbridged_map(bridge, variables[i],
-                                                        IndexInVector(i)))
+            mapping = unbridged_map(bridge, variables[i], IndexInVector(i))
+            if mapping !== nothing
+                push!(map.unbridged_function, mapping)
+            end
         end
         index = first(variables).value
         return variables, MOI.ConstraintIndex{MOI.VectorOfVariables, typeof(set)}(index)
     end
+end
+function function_for(map::Map, ci::MOI.ConstraintIndex{MOI.SingleVariable})
+    return MOI.SingleVariable(MOI.VariableIndex(ci.value))
+end
+function function_for(map::Map, ci::MOI.ConstraintIndex{MOI.VectorOfVariables})
+    variables = MOI.VariableIndex[]
+    for i in ci.value:-1:-length(map.bridges)
+        vi = MOI.VariableIndex(i)
+        if bridge_index(map, vi) == -ci.value
+            push!(variables, vi)
+        else
+            break
+        end
+    end
+    return MOI.VectorOfVariables(variables)
 end
 function Base.iterate(map::Map, state=1)
     while state ≤ length(map.bridges) && map.bridges[state] === nothing
