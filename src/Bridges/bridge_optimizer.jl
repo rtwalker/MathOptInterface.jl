@@ -346,11 +346,7 @@ function MOI.get(b::AbstractBridgeOptimizer,
         if attr isa MOI.ConstraintFunction && br isa Variable.AbstractBridge
             return Variable.function_for(Variable.bridges(b), ci)
         end
-        if needs_fallback(b, attr, br)
-            func = MOIU.get_fallback(b, attr, ci)
-        else
-            func = MOI.get(b, attr, br)
-        end
+        func = MOI.get(b, attr, br)
     else
         func = MOI.get(b.model, attr, ci)
     end

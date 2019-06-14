@@ -45,7 +45,6 @@ function MOI.get(::MOI.ModelLike, ::MOI.ConstraintPrimal,
                  bridge::ZerosBridge{T}) where T
     return zeros(T, bridge.n)
 end
-MOIB.needs_fallback(::MOI.ModelLike, ::MOI.ConstraintDual, ::ZerosBridge) = true
 
 function MOI.get(::MOI.ModelLike, ::MOI.VariablePrimal,
                  ::ZerosBridge{T}, ::IndexInVector) where T
