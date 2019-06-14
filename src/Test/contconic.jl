@@ -610,16 +610,18 @@ function _rotatedsoc1test(model::MOI.ModelLike, config::TestConfig, abvars::Bool
     MOI.empty!(model)
     @test MOI.is_empty(model)
 
-    x = MOI.add_variables(model, 2)
     if abvars
-        a, vc1 = MOI.add_constrained_variable(model, MOI.EqualTo(0.5))
+        abx, rsoc = MOI.add_constrained_variables(model, MOI.RotatedSecondOrderCone(4))
+        a, b, x1, x2 = abx
+        x = [x1, x2]
+        vc1 = MOI.add_constraint(model, MOI.SingleVariable(a), MOI.EqualTo(0.5))
         # We test this after the creation of every `SingleVariable` constraint
         # to ensure a good coverage of corner cases.
         @test vc1.value == a.value
-        b, vc2 = MOI.add_constrained_variable(model, MOI.EqualTo(1.0))
+        vc2 = MOI.add_constraint(model, MOI.SingleVariable(b), MOI.EqualTo(1.0))
         @test vc2.value == b.value
-        rsoc = MOI.add_constraint(model, MOI.VectorOfVariables([a; b; x]), MOI.RotatedSecondOrderCone(4))
     else
+        x = MOI.add_variables(model, 2)
         a = 0.5
         b = 1.0
         rsoc = MOI.add_constraint(model, MOI.VectorAffineFunction(MOI.VectorAffineTerm.([3, 4], MOI.ScalarAffineTerm.([1., 1.], x)), [a, b, 0., 0.]), MOI.RotatedSecondOrderCone(4))
@@ -707,17 +709,14 @@ function rotatedsoc2test(model::MOI.ModelLike, config::TestConfig)
     MOI.empty!(model)
     @test MOI.is_empty(model)
 
-    x = Vector{MOI.VectorOfVariables}(undef, 3)
+    x, rsoc = MOI.add_constrained_variables(model, MOI.RotatedSecondOrderCone(3))
 
-    x1, vc1 = MOI.add_constrained_variable(model, MOI.LessThan(1.0))
-    @test vc1.value == x1.value
-    x2, vc2 = MOI.add_constrained_variable(model, MOI.EqualTo(0.5))
-    @test vc2.value == x2.value
-    x3, vc3 = MOI.add_constrained_variable(model, MOI.GreaterThan(2.0))
-    @test vc3.value == x3.value
-
-    x = [x1, x2, x3]
-    rsoc = MOI.add_constraint(model, MOI.VectorOfVariables(x), MOI.RotatedSecondOrderCone(3))
+    vc1 = MOI.add_constraint(model, MOI.SingleVariable(x[1]), MOI.LessThan(1.0))
+    @test vc1.value == x[1].value
+    vc2 = MOI.add_constraint(model, MOI.SingleVariable(x[2]), MOI.EqualTo(0.5))
+    @test vc2.value == x[2].value
+    vc3 = MOI.add_constraint(model, MOI.SingleVariable(x[3]), MOI.GreaterThan(2.0))
+    @test vc3.value == x[3].value
 
     @test MOI.get(model, MOI.NumberOfConstraints{MOI.SingleVariable,MOI.LessThan{Float64}}()) == 1
     @test MOI.get(model, MOI.NumberOfConstraints{MOI.SingleVariable,MOI.EqualTo{Float64}}()) == 1

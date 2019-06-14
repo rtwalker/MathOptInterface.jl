@@ -1,13 +1,17 @@
 """
     ZerosBridge{T} <: Bridges.Variable.AbstractBridge
 
-Transforms constrained variables in [`MathOptInterface.Zeros`](@ref) zeros,
+Transforms constrained variables in [`MathOptInterface.Zeros`](@ref) to zeros,
 which ends up creating no variables in the underlying model.
 The bridged variables are therefore similar to parameters with zero values.
 Parameters with non-zero value can be created with constrained variables in
 [`MOI.EqualTo`](@ref) by combining a [`VectorizeBridge`](@ref) and this bridge.
-The dual values cannot be determined by the bridged hence they are determined
-by the bridged optimizer using [`MathOptInterface.Utilities.get_fallback`](@ref).
+The functions cannot be unbridged, given a function, we cannot determine, if
+the bridged variables were use.
+The dual values cannot be determined by the bridge but they can be determined
+by the bridged optimizer using [`MathOptInterface.Utilities.get_fallback`](@ref)
+if a `CachingOptimizer` is used (since `ConstraintFunction` cannot be got
+as functions cannot be unbridged.
 """
 struct ZerosBridge{T} <: AbstractBridge
     n::Int # Number of variables

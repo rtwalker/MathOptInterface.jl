@@ -58,13 +58,25 @@ This function should only be called if `is_bridged(b, F, S)`.
 """
 function bridge_type end
 
+# If `ci.value < 0` is the constraint of a bridged constrained variable,
+# but if `S` is `SingleVariable`, it can also simply be a constraint on a
+# bridged variable.
+function is_variable_bridged(b::AbstractBridgeOptimizer,
+                             ci::MOI.ConstraintIndex)
+    return ci.value < 0
+end
+function is_variable_bridged(b::AbstractBridgeOptimizer,
+                             ci::MOI.ConstraintIndex{MOI.SingleVariable})
+    return ci.value < 0 && !haskey(Constraint.bridges(b), ci)
+end
+
 """
     bridge(b::AbstractBridgeOptimizer, ci::CI)
 
 Return the `AbstractBridge` used to bridge the constraint with index `ci`.
 """
-function bridge(b::AbstractBridgeOptimizer, ci::CI)
-    if ci.value < 0
+function bridge(b::AbstractBridgeOptimizer, ci::CI{S}) where S
+    if is_variable_bridged(b, ci)
         return bridge(b, MOI.VariableIndex(ci.value))
     else
         return Constraint.bridges(b)[ci]
@@ -118,10 +130,12 @@ function MOI.is_valid(b::AbstractBridgeOptimizer, vi::MOI.VariableIndex)
         return MOI.is_valid(b.model, vi)
     end
 end
-function MOI.is_valid(b::AbstractBridgeOptimizer, ci::MOI.ConstraintIndex)
+function MOI.is_valid(b::AbstractBridgeOptimizer, ci::MOI.ConstraintIndex{F, S}) where {F, S}
     if is_bridged(b, typeof(ci))
-        if ci.value < 0
-            return MOI.is_valid(b, MOI.VariableIndex(ci.value))
+        if is_variable_bridged(b, ci)
+            vi = MOI.VariableIndex(ci.value)
+            return MOI.is_valid(b, vi) &&
+                Variable.constrained_set(Variable.bridges(b), vi) == S
         else
             return haskey(Constraint.bridges(b), ci)
         end
@@ -463,6 +477,11 @@ function MOI.add_constraint(b::AbstractBridgeOptimizer, f::MOI.AbstractFunction,
     if Variable.has_bridges(Variable.bridges(b))
         if f isa MOI.SingleVariable
             if is_bridged(b, f.variable)
+                if MOI.is_valid(b, MOI.ConstraintIndex{MOI.SingleVariable, typeof(s)}(f.variable.value))
+                    # The other constraint could have been through a variable bridge.
+                    error("Cannot add two `SingleVariable`-in-`$(typeof(s))`",
+                          " on the same variable $(f.variable).")
+                end
                 BridgeType = Constraint.concrete_bridge_type(
                     Constraint.ScalarFunctionizeBridge{Float64}, typeof(f), typeof(s))
                 bridge = Constraint.bridge_constraint(BridgeType, b, f, s)
