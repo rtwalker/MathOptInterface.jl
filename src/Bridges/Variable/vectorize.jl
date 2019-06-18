@@ -103,5 +103,5 @@ end
 function unbridged_map(bridge::VectorizeBridge{T}, vi::MOI.VariableIndex) where T
     func = MOIU.operate(-, T, MOI.SingleVariable(vi),
                         bridge.set_constant)
-    return bridge.variable => func
+    return (bridge.variable => func,)
 end

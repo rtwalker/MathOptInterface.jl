@@ -21,6 +21,7 @@ function ModifyConstraintNotAllowed(
     message="") where {F<:AbstractFunction, S<:AbstractSet}
     ModifyConstraintNotAllowed{F, S, typeof(change)}(ci, change, message)
 end
+throw_modify_not_allowed(ci::ConstraintIndex, args...) = ModifyConstraintNotAllowed(ci, args...)
 
 operation_name(err::ModifyConstraintNotAllowed{F, S}) where {F, S} = "Modifying the constraints $(err.constraint_index) with $(err.change)"
 
@@ -40,6 +41,7 @@ end
 function ModifyObjectiveNotAllowed(change::AbstractFunctionModification)
     ModifyObjectiveNotAllowed(change, "")
 end
+throw_modify_not_allowed(::ObjectiveFunction, args...) = ModifyObjectiveNotAllowed(args...)
 
 operation_name(err::ModifyObjectiveNotAllowed) = "Modifying the objective function with $(err.change)"
 

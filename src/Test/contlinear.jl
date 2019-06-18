@@ -25,6 +25,9 @@ function linear1test(model::MOI.ModelLike, config::TestConfig)
     MOI.empty!(model)
     @test MOI.is_empty(model)
 
+    # We don't use `add_constrained_variable` for `v1` as we will modify the
+    # `set` hence it will modify the bridged function if it is bridged by
+    # `Variable.VectorizeBridge` which is not supported.
     v1 = MOI.add_variable(model)
     vc1 = MOI.add_constraint(model, MOI.SingleVariable(v1), MOI.GreaterThan(0.0))
     # We test this after the creation of every `SingleVariable` constraint

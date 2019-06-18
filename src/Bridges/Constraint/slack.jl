@@ -59,7 +59,6 @@ MOI.get(b::ScalarSlackBridge{T, F, S}, ::MOI.ListOfConstraintIndices{MOI.SingleV
 # Indices
 function MOI.delete(model::MOI.ModelLike, c::ScalarSlackBridge)
     MOI.delete(model, c.equality)
-    MOI.delete(model, c.slack_in_set)
     MOI.delete(model, c.slack)
     return
 end
@@ -163,7 +162,6 @@ MOI.get(b::VectorSlackBridge{T, F, S}, ::MOI.ListOfConstraintIndices{MOI.VectorO
 # Indices
 function MOI.delete(model::MOI.ModelLike, c::VectorSlackBridge)
     MOI.delete(model, c.equality)
-    MOI.delete(model, c.slacks_in_set)
     MOI.delete(model, c.slacks)
     return
 end

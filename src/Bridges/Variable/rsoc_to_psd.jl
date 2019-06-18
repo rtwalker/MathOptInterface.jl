@@ -152,5 +152,5 @@ function unbridged_map(bridge::RSOCtoPSDBridge{T}, vi::MOI.VariableIndex,
     else
         func = convert(MOI.ScalarAffineFunction{T}, sv)
     end
-    return _variable(bridge, i) => func
+    return (_variable(bridge, i) => func,)
 end

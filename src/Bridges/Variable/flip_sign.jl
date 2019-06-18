@@ -37,6 +37,12 @@ function MOI.get(::FlipSignBridge{T, S1, S2},
     return [bridge.flipped_constraint]
 end
 
+# References
+function MOI.delete(model::MOI.ModelLike, bridge::FlipSignBridge)
+    MOI.delete(model, bridge.flipped_variables)
+end
+
+
 # Attributes, Bridge acting as a constraint
 
 function MOI.get(model::MOI.ModelLike,
@@ -57,7 +63,12 @@ end
 function unbridged_map(bridge::FlipSignBridge{T}, vi::MOI.VariableIndex,
                        i::IndexInVector) where T
     func = MOIU.operate(-, T, MOI.SingleVariable(vi))
-    return bridge.flipped_variables[i.value] => func
+    return (bridge.flipped_variables[i.value] => func,)
+end
+
+function MOI.set(model::MOI.ModelLike, attr::MOI.VariablePrimalStart,
+                 bridge::FlipSignBridge, value, i::IndexInVector)
+    MOI.set(model, attr, bridge.flipped_variables[i.value], -value)
 end
 
 """

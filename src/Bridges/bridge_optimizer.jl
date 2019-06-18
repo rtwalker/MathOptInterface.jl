@@ -143,19 +143,39 @@ function MOI.is_valid(b::AbstractBridgeOptimizer, ci::MOI.ConstraintIndex{F, S})
         return MOI.is_valid(b.model, ci)
     end
 end
+function MOI.delete(b::AbstractBridgeOptimizer, vis::Vector{MOI.VariableIndex})
+    # Delete all `MOI.SingleVariable` constraint of these variables
+    for vi in vis
+        for ci in Constraint.variable_constraints(Constraint.bridges(b), vi)
+            MOI.delete(b, ci)
+        end
+    end
+    if any(vi -> is_bridged(b, vi), vis)
+        for vi in vis
+            MOI.throw_if_not_valid(b, vi)
+        end
+        if all(vi -> is_bridged(b, vi), vis) && Variable.has_keys(Variable.bridges(b), vis)
+            MOI.delete(b, bridge(b, first(vis)))
+            delete!(Variable.bridges(b), vis)
+        else
+            for vi in vis
+                MOI.delete(b, vi)
+            end
+        end
+    else
+        MOI.delete(b.model, vis)
+    end
+end
 function MOI.delete(b::AbstractBridgeOptimizer, vi::MOI.VariableIndex)
     # Delete all `MOI.SingleVariable` constraint of this variable
     for ci in Constraint.variable_constraints(Constraint.bridges(b), vi)
         MOI.delete(b, ci)
     end
     if is_bridged(b, vi)
-        if !MOI.is_valid(b, vi)
-            throw(MOI.InvalidIndex(vi))
-        end
-        i = Variable.index_in_vector_of_variables(Variable.bridges(b), vi)
-        if !iszero(i.value)
+        MOI.throw_if_not_valid(b, vi)
+        if Variable.length_of_vector_of_variables(Variable.bridges(b), vi) > 1
             message = string("Cannot delete a variable part of a bridged",
-                             " vector of constrained variables.")
+                             " vector of constrained variables with length > 1.")
             throw(MOI.DeleteNotAllowed(vi, message))
         end
         MOI.delete(b, bridge(b, vi))
@@ -166,11 +186,15 @@ function MOI.delete(b::AbstractBridgeOptimizer, vi::MOI.VariableIndex)
 end
 function MOI.delete(b::AbstractBridgeOptimizer, ci::CI)
     if is_bridged(b, typeof(ci))
-        if !MOI.is_valid(b, ci)
-            throw(MOI.InvalidIndex(ci))
-        end
+        MOI.throw_if_not_valid(b, ci)
         MOI.delete(b, bridge(b, ci))
-        delete!(Constraint.bridges(b), ci)
+        if is_variable_bridged(b, ci)
+            error("Cannot delete constraint index of bridged constrained,",
+                  " delete the scalar variable or the vector of variables",
+                  " instead.")
+        else
+            delete!(Constraint.bridges(b), ci)
+        end
         b.name_to_con = nothing
         if haskey(b.con_to_name, ci)
             delete!(b.con_to_name, ci)
@@ -538,27 +562,84 @@ function is_bridged(b::AbstractBridgeOptimizer,
                     change::Union{MOI.ScalarCoefficientChange, MOI.MultirowChange})
     return is_bridged(b, change.variable)
 end
+function _modify_not_allowed(::MOI.ConstraintIndex, change, message)
+    throw(MOI.ModifyConstraintNotAllowed(
+        ci, change, "The change $change contains variables into a" *
+        " function with nonzero constant."))
+end
+function modify_bridged_change(b::AbstractBridgeOptimizer, obj,
+                               change::MOI.MultirowChange)
+    func = variable_bridged_function(b, change.variable)::MOI.ScalarAffineFunction
+    if !iszero(func.constant)
+        # We would need to get the constant in the function, and the
+        # coefficient of `change.variable` to remove its contribution
+        # to the constant and then modify the constant.
+        throw(throw_modify_not_allowed(
+            obj, change, "The change $change contains variables into a" *
+            " function with nonzero constant."))
+    end
+    for t in func.terms
+        coefs = [(i, coef * t.coefficient) for (i, coef) in change.new_coefficients]
+        MOI.modify(b, obj, MOI.MultirowChange(t.variable_index, coefs))
+    end
+end
+function modify_bridged_change(b::AbstractBridgeOptimizer, obj,
+                               change::MOI.ScalarCoefficientChange)
+    func = variable_bridged_function(b, change.variable)::MOI.ScalarAffineFunction
+    if !iszero(func.constant)
+        # We would need to get the constant in the set, and the
+        # coefficient of `change.variable` to remove its contribution
+        # to the constant and then modify the constant.
+        throw(throw_modify_not_allowed(
+            obj, change, "The change $change contains variables into a" *
+            " function with nonzero constant."))
+    end
+    for t in func.terms
+        coef = t.coefficient * change.new_coefficient
+        MOI.modify(b, obj, MOI.ScalarCoefficientChange(t.variable_index, coef))
+    end
+end
 function MOI.modify(b::AbstractBridgeOptimizer, ci::CI,
                     change::MOI.AbstractFunctionModification)
     if is_bridged(b, change)
-        throw(MOI.ModifyConstraintNotAllowed(ci, change, "The variable is bridged."))
-    end
-    if is_bridged(b, typeof(ci))
-        MOI.modify(b, bridge(b, ci), change)
+        modify_bridged_change(b, ci, change)
     else
-        MOI.modify(b.model, ci, change)
+        if is_bridged(b, typeof(ci))
+            MOI.modify(b, bridge(b, ci), change)
+        else
+            MOI.modify(b.model, ci, change)
+        end
     end
 end
 
 # Objective
 function MOI.modify(b::AbstractBridgeOptimizer, obj::MOI.ObjectiveFunction,
                      change::MOI.AbstractFunctionModification)
-    MOI.modify(b.model, obj, change)
+    if is_bridged(b, change)
+        modify_bridged_change(b, obj, change)
+    else
+        MOI.modify(b.model, obj, change)
+    end
 end
 
 # Variables
-MOI.add_variable(b::AbstractBridgeOptimizer) = MOI.add_variable(b.model)
-MOI.add_variables(b::AbstractBridgeOptimizer, n) = MOI.add_variables(b.model, n)
+function MOI.add_variable(b::AbstractBridgeOptimizer)
+    if is_bridged(b, MOI.Reals)
+        variables, constraint = MOI.add_constrained_variables(b, MOI.Reals(1))
+        @assert isone(length(variables))
+        return first(variables)
+    else
+        return MOI.add_variable(b.model)
+    end
+end
+function MOI.add_variables(b::AbstractBridgeOptimizer, n)
+    if is_bridged(b, MOI.Reals)
+        variables, constraint = MOI.add_constrained_variables(b, MOI.Reals(n))
+        return variables
+    else
+        return MOI.add_variables(b.model, n)
+    end
+end
 
 #function MOI.supports_constrained_variables(b::AbstractBridgeOptimizer,
 #                                            S::Type{<:MOI.AbstractVectorSet})
