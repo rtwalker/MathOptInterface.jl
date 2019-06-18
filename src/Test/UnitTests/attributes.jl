@@ -40,9 +40,8 @@ Test that the [`MOI.RawStatusString`](@ref) attribute is implemented for
 function raw_status_string(model::MOI.ModelLike, config::TestConfig)
     MOI.empty!(model)
     @test MOI.is_empty(model)
-    x = MOI.add_variable(model)
-    MOI.add_constraint(model, MOI.SingleVariable(x), MOI.GreaterThan(0.0))
-    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    x, vx = MOI.add_constrained_variable(model, MOI.LessThan(0.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
     MOI.set(model, MOI.ObjectiveFunction{MOI.SingleVariable}(),
             MOI.SingleVariable(x))
     test_model_solution(model, config, objective_value = 0.0,
@@ -61,9 +60,8 @@ Test that the [`MOI.SolveTime`](@ref) attribute is implemented for `model`.
 function solve_time(model::MOI.ModelLike, config::TestConfig)
     MOI.empty!(model)
     @test MOI.is_empty(model)
-    x = MOI.add_variable(model)
-    MOI.add_constraint(model, MOI.SingleVariable(x), MOI.LessThan(0.0))
-    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+    x, vx = MOI.add_constrained_variable(model, MOI.GreaterThan(0.0))
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
     MOI.set(model, MOI.ObjectiveFunction{MOI.SingleVariable}(),
             MOI.SingleVariable(x))
     test_model_solution(model, config, objective_value = 0.0,

@@ -87,6 +87,13 @@ end
 # by `substitute_variable` and `substitute_variables`.
 function substitute_variable(variable_map::Function,
                              term::MOI.ScalarAffineTerm{T}) where T
+    f1 = variable_map(term.variable_index_1)
+    f2 = variable_map(term.variable_index_2)
+    f12 = operate(*, T, f1, f2)
+    return operate!(*, T, f12, term.coefficient)::MOI.ScalarQuadraticFunction{T}
+end
+function substitute_variable(variable_map::Function,
+                             term::MOI.ScalarAffineTerm{T}) where T
     return operate(*, T, term.coefficient,
                        variable_map(term.variable_index))::MOI.ScalarAffineFunction{T}
 end
@@ -117,6 +124,19 @@ function substitute_variables(
     end
     return g
 end
+function substitute_variables(
+    variable_map::Function,
+    func::MOI.ScalarQuadraticFunction{T}) where T
+    g = MOI.ScalarQuadraticFunction(MOI.ScalarAffineTerm{T}[], MOI.ScalarQuadraticTerm{T}[], MOI.constant(func))
+    for term in func.affine_terms
+        operate!(+, T, g, substitute_variable(variable_map, term))::typeof(func)
+    end
+    for term in func.quadratic_terms
+        operate!(+, T, g, substitute_variable(variable_map, term))::typeof(func)
+    end
+    return g
+end
+
 
 # Vector of constants
 constant_vector(f::Union{SAF, SQF}) = [f.constant]

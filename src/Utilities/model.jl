@@ -214,22 +214,35 @@ function MOI.set(model::AbstractModel, ::MOI.VariableName, vi::VI, name::String)
 end
 MOI.get(model::AbstractModel, ::MOI.VariableName, vi::VI) = get(model.var_to_name, vi, EMPTYSTRING)
 
+"""
+    build_name_to_var_map(con_to_name::Dict{MOI.VariableIndex, String})
+
+Create and return a reverse map from name to variable index, given a map from
+variable index to name. The special value `MOI.VariableIndex(0)` is used to
+indicate that multiple variables have the same name.
+"""
+function build_name_to_var_map(var_to_name::Dict{VI, String})
+    name_to_var = Dict{String, VI}()
+    for (var, var_name) in var_to_name
+        if haskey(name_to_var, var_name)
+            # 0 is a special value that means this string does not map to
+            # a unique variable name.
+            name_to_var[var_name] = VI(0)
+        else
+            name_to_var[var_name] = var
+        end
+    end
+    return name_to_var
+end
+
+
 function MOI.get(model::AbstractModel, ::Type{VI}, name::String)
     if model.name_to_var === nothing
         # Rebuild the map.
-        model.name_to_var = Dict{String, VI}()
-        for (var, var_name) in model.var_to_name
-            if haskey(model.name_to_var, var_name)
-                # -1 is a special value that means this string does not map to
-                # a unique variable name.
-                model.name_to_var[var_name] = VI(-1)
-            else
-                model.name_to_var[var_name] = var
-            end
-        end
+        model.name_to_var = build_name_to_var_map(model.var_to_name)
     end
     result = get(model.name_to_var, name, nothing)
-    if result == VI(-1)
+    if result == VI(0)
         error("Multiple variables have the name $name.")
     else
         return result
@@ -252,14 +265,14 @@ MOI.get(model::AbstractModel, ::MOI.ConstraintName, ci::CI) = get(model.con_to_n
 
 Create and return a reverse map from name to constraint index, given a map from
 constraint index to name. The special value
-`MOI.ConstraintIndex{Nothing, Nothing}(-1)` is used to indicate that multiple
+`MOI.ConstraintIndex{Nothing, Nothing}(0)` is used to indicate that multiple
 constraints have the same name.
 """
 function build_name_to_con_map(con_to_name::Dict{CI, String})
     name_to_con = Dict{String, CI}()
     for (con, con_name) in con_to_name
         if haskey(name_to_con, con_name)
-            name_to_con[con_name] = CI{Nothing, Nothing}(-1)
+            name_to_con[con_name] = CI{Nothing, Nothing}(0)
         else
             name_to_con[con_name] = con
         end
@@ -274,7 +287,7 @@ function MOI.get(model::AbstractModel, ConType::Type{<:CI}, name::String)
         model.name_to_con = build_name_to_con_map(model.con_to_name)
     end
     ci = get(model.name_to_con, name, nothing)
-    if ci == CI{Nothing, Nothing}(-1)
+    if ci == CI{Nothing, Nothing}(0)
         error("Multiple constraints have the name $name.")
     elseif ci isa ConType
         return ci

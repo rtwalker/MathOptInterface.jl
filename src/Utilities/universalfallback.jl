@@ -226,7 +226,7 @@ function MOI.get(uf::UniversalFallback, ::Type{CI{F, S}}, name::String) where {F
         return ci
     else
         ci = get(uf.name_to_con, name, nothing)
-        if ci == CI{Nothing, Nothing}(-1)
+        if ci == CI{Nothing, Nothing}(0)
             error("Multiple constraints have the name $name.")
         elseif ci isa CI{F, S}
             return ci
@@ -243,7 +243,7 @@ function MOI.get(uf::UniversalFallback, ::Type{CI}, name::String)
     ci = MOI.get(uf.model, CI, name)
     if ci === nothing
         uf_ci = get(uf.name_to_con, name, nothing)
-        if uf_ci == CI{Nothing, Nothing}(-1)
+        if uf_ci == CI{Nothing, Nothing}(0)
             error("Multiple constraints have the name $name.")
         else
             return uf_ci

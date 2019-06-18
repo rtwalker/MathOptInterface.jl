@@ -14,9 +14,11 @@ mutable struct LazyBridgeOptimizer{OT<:MOI.ModelLike} <: AbstractBridgeOptimizer
     model::OT
     # Bridged variables
     variable_map::Variable.Map
+    var_to_name::Dict{MOI.VariableIndex, String}
+    name_to_var::Union{Dict{String, MOI.VariableIndex}, Nothing}
     # Bridged constraints
     constraint_map::Constraint.Map
-    con_to_name::Dict{CI, String}
+    con_to_name::Dict{MOI.ConstraintIndex, String}
     name_to_con::Union{Dict{String, MOI.ConstraintIndex}, Nothing}
     # Bellman-Ford
     variable_bridge_types::Vector{Any} # List of types of available bridges
@@ -28,7 +30,9 @@ mutable struct LazyBridgeOptimizer{OT<:MOI.ModelLike} <: AbstractBridgeOptimizer
 end
 function LazyBridgeOptimizer(model::MOI.ModelLike)
     return LazyBridgeOptimizer{typeof(model)}(
-        model, Variable.Map(), Constraint.Map(), Dict{CI, String}(), nothing,
+        model,
+        Variable.Map(), Dict{MOI.VariableIndex, String}(), nothing,
+        Constraint.Map(), Dict{MOI.ConstraintIndex, String}(), nothing,
         Any[], Dict{Tuple{DataType}, Int}(),
         Dict{Tuple{DataType}, DataType}(),
         Any[], Dict{Tuple{DataType, DataType}, Int}(),
