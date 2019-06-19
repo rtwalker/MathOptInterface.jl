@@ -86,7 +86,7 @@ end
 # For performance reason, we assume that the type of the function is unchanged
 # by `substitute_variable` and `substitute_variables`.
 function substitute_variable(variable_map::Function,
-                             term::MOI.ScalarAffineTerm{T}) where T
+                             term::MOI.ScalarQuadraticTerm{T}) where T
     f1 = variable_map(term.variable_index_1)
     f2 = variable_map(term.variable_index_2)
     f12 = operate(*, T, f1, f2)
