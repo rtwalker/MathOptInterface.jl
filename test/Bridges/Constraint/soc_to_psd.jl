@@ -33,7 +33,7 @@ end
                    for F in [MOI.VectorOfVariables, MOI.VectorAffineFunction{Float64}]
                    for S in [MOI.RotatedSecondOrderCone]])
 
-    mock.optimize! = (mock::MOIU.MockOptimizer) -> MOIU.mock_optimize!(mock, [1/√2, 1/√2, 0.5, 1.0],
+    mock.optimize! = (mock::MOIU.MockOptimizer) -> MOIU.mock_optimize!(mock, [0.5, 1.0, 1/√2, 1/√2],
                           (MOI.SingleVariable,                MOI.EqualTo{Float64})       => [-√2, -1/√2],
                           (MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle) => [[√2, -1/2, √2/8, -1/2, √2/8, √2/8]])
     MOIT.rotatedsoc1vtest(bridged_mock, config)
