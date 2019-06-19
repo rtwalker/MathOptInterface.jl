@@ -189,4 +189,5 @@ Base.length(::EmptyMap) = 0
 Base.keys(::EmptyMap) = MOIB.EmptyVector{MOI.VariableIndex}()
 Base.values(::EmptyMap) = MOIB.EmptyVector{AbstractBridge}()
 has_bridges(::EmptyMap) = false
+number_of_variables(::EmptyMap) = 0
 number_with_set(::EmptyMap, ::Type{<:MOI.AbstractSet}) = 0
