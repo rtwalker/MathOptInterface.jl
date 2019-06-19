@@ -63,7 +63,7 @@ end
     MOIT.soc4test(mock, config)
 end
 @testset "RSOC" begin
-    mock.optimize! = (mock::MOIU.MockOptimizer) -> MOIU.mock_optimize!(mock, [1/√2, 1/√2, 0.5, 1.0],
+    mock.optimize! = (mock::MOIU.MockOptimizer) -> MOIU.mock_optimize!(mock, [0.5, 1.0, 1/√2, 1/√2],
                           (MOI.SingleVariable,                MOI.EqualTo{Float64})       => [-√2, -1/√2],
                           (MOI.VectorOfVariables,             MOI.RotatedSecondOrderCone) => [[√2, 1/√2, -1.0, -1.0]])
     # double variable bounds on a and b variables
